@@ -145,7 +145,7 @@ public class ClientEventHandler {
 		}
 
 		if (player.ticksExisted == 40) {
-			if (!Reference.DEV_ENVIRONMENT && !ConfigExperiments.getEnabledElements().isEmpty() && !showedDebugWarning) {
+			if (false && !Reference.DEV_ENVIRONMENT && !ConfigExperiments.getEnabledElements().isEmpty() && !showedDebugWarning) {
 				if (!forceHideSnapshotWarning && !Reference.TESTING) {
 					ChatComponentText text = new ChatComponentText(I18n.format("efr.warn.experimental", ConfigExperiments.buildLoadedExperimentsList(true)));
 					player.addChatComponentMessage(text);
