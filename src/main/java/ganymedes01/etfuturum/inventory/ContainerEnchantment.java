@@ -3,6 +3,7 @@ package ganymedes01.etfuturum.inventory;
 import ganymedes01.etfuturum.ModBlocks;
 import ganymedes01.etfuturum.api.EnchantingFuelRegistry;
 import ganymedes01.etfuturum.lib.Reference;
+import ganymedes01.etfuturum.storage.EtFuturumPlayer;
 import net.minecraft.enchantment.EnchantmentData;
 import net.minecraft.enchantment.EnchantmentHelper;
 import net.minecraft.entity.player.EntityPlayer;
@@ -13,14 +14,10 @@ import net.minecraft.item.ItemStack;
 import net.minecraft.world.World;
 import net.minecraftforge.common.ForgeHooks;
 
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Random;
 
 public class ContainerEnchantment extends Container {
-
-	public static final Map<String, Integer> seeds = new HashMap<String, Integer>();
 
 	/**
 	 * SlotEnchantmentTable object with ItemStack to be enchanted
@@ -42,15 +39,12 @@ public class ContainerEnchantment extends Container {
 	 * 3-member array storing the enchantment levels of each slot
 	 */
 	public int[] enchantLevels;
-	public int[] field_178151_h;
+	public int[] enchantmentIds;
+
+	public final boolean noFuel;
 
 	public ContainerEnchantment(InventoryPlayer inventory, World world, int x, int y, int z) {
 		tableInventory = new InventoryBasic("Enchant", true, 2) {
-
-			@Override
-			public int getInventoryStackLimit() {
-				return 64;
-			}
 
 			@Override
 			public void markDirty() {
@@ -63,49 +57,46 @@ public class ContainerEnchantment extends Container {
 		posZ = z;
 		rand = new Random();
 		enchantLevels = new int[3];
-		field_178151_h = new int[]{-1, -1, -1};
+		enchantmentIds = new int[]{-1, -1, -1};
 		this.world = world;
 		enchantmentSeed = getEnchantSeed(inventory.player);
-		addSlotToContainer(new Slot(tableInventory, 0, 15, 47) {
-
-			@Override
-			public boolean isItemValid(ItemStack stack) {
-				return true;
-			}
+		noFuel = EnchantingFuelRegistry.getFuels().isEmpty();
+		addSlotToContainer(new Slot(tableInventory, 0, noFuel ? 25 : 15, 47) {
 
 			@Override
 			public int getSlotStackLimit() {
 				return 1;
 			}
 		});
-		addSlotToContainer(new Slot(tableInventory, 1, 35, 47) {
-
-			@Override
-			public boolean isItemValid(ItemStack stack) {
-				return EnchantingFuelRegistry.isFuel(stack);
-			}
-		});
+		if (!noFuel) {
+			addSlotToContainer(new Slot(tableInventory, 1, 35, 47) {
+				@Override
+				public boolean isItemValid(ItemStack stack) {
+					return EnchantingFuelRegistry.isFuel(stack);
+				}
+			});
+		}
 		int var4;
 
-		for (var4 = 0; var4 < 3; ++var4)
-			for (int var5 = 0; var5 < 9; ++var5)
+		for (var4 = 0; var4 < 3; ++var4) {
+			for (int var5 = 0; var5 < 9; ++var5) {
 				addSlotToContainer(new Slot(inventory, var5 + var4 * 9 + 9, 8 + var5 * 18, 84 + var4 * 18));
+			}
+		}
 
-		for (var4 = 0; var4 < 9; ++var4)
+		for (var4 = 0; var4 < 9; ++var4) {
 			addSlotToContainer(new Slot(inventory, var4, 8 + var4 * 18, 142));
+		}
 	}
 
 	private static void setEnchantSeed(EntityPlayer player, int seed) {
-		seeds.put(player.getUniqueID().toString(), seed);
+		EtFuturumPlayer storage = EtFuturumPlayer.get(player);
+		storage.setEnchantmentSeed(seed);
 	}
 
 	private static int getEnchantSeed(EntityPlayer player) {
-		Integer seed = seeds.get(player.getUniqueID().toString());
-		if (seed == null) {
-			seed = player.worldObj.rand.nextInt();
-			setEnchantSeed(player, seed);
-		}
-		return seed;
+		EtFuturumPlayer storage = EtFuturumPlayer.get(player);
+		return storage.getEnchantmentSeed();
 	}
 
 	private static void chargeForEnchant(EntityPlayer player, Random rand, int amount) {
@@ -121,9 +112,9 @@ public class ContainerEnchantment extends Container {
 		p_75132_1_.sendProgressBarUpdate(this, 1, enchantLevels[1]);
 		p_75132_1_.sendProgressBarUpdate(this, 2, enchantLevels[2]);
 		p_75132_1_.sendProgressBarUpdate(this, 3, enchantmentSeed & -16);
-		p_75132_1_.sendProgressBarUpdate(this, 4, field_178151_h[0]);
-		p_75132_1_.sendProgressBarUpdate(this, 5, field_178151_h[1]);
-		p_75132_1_.sendProgressBarUpdate(this, 6, field_178151_h[2]);
+		p_75132_1_.sendProgressBarUpdate(this, 4, enchantmentIds[0]);
+		p_75132_1_.sendProgressBarUpdate(this, 5, enchantmentIds[1]);
+		p_75132_1_.sendProgressBarUpdate(this, 6, enchantmentIds[2]);
 	}
 
 	/**
@@ -139,9 +130,9 @@ public class ContainerEnchantment extends Container {
 			var2.sendProgressBarUpdate(this, 1, enchantLevels[1]);
 			var2.sendProgressBarUpdate(this, 2, enchantLevels[2]);
 			var2.sendProgressBarUpdate(this, 3, enchantmentSeed & -16);
-			var2.sendProgressBarUpdate(this, 4, field_178151_h[0]);
-			var2.sendProgressBarUpdate(this, 5, field_178151_h[1]);
-			var2.sendProgressBarUpdate(this, 6, field_178151_h[2]);
+			var2.sendProgressBarUpdate(this, 4, enchantmentIds[0]);
+			var2.sendProgressBarUpdate(this, 5, enchantmentIds[1]);
+			var2.sendProgressBarUpdate(this, 6, enchantmentIds[2]);
 		}
 	}
 
@@ -152,7 +143,7 @@ public class ContainerEnchantment extends Container {
 		else if (p_75137_1_ == 3)
 			enchantmentSeed = p_75137_2_;
 		else if (p_75137_1_ >= 4 && p_75137_1_ <= 6)
-			field_178151_h[p_75137_1_ - 4] = p_75137_2_;
+			enchantmentIds[p_75137_1_ - 4] = p_75137_2_;
 		else
 			super.updateProgressBar(p_75137_1_, p_75137_2_);
 	}
@@ -174,14 +165,14 @@ public class ContainerEnchantment extends Container {
 					for (j = -1; j <= 1; ++j)
 						for (int k = -1; k <= 1; ++k)
 							if ((j != 0 || k != 0) && world.isAirBlock(posX + k, posY, posZ + j) && world.isAirBlock(posX + k, posY + 1, posZ + j)) {
-								power += ForgeHooks.getEnchantPower(world, posX + k * 2, posY, posZ + j * 2);
-								power += ForgeHooks.getEnchantPower(world, posX + k * 2, posY + 1, posZ + j * 2);
+								power += (int) ForgeHooks.getEnchantPower(world, posX + k * 2, posY, posZ + j * 2);
+								power += (int) ForgeHooks.getEnchantPower(world, posX + k * 2, posY + 1, posZ + j * 2);
 
 								if (k != 0 && j != 0) {
-									power += ForgeHooks.getEnchantPower(world, posX + k * 2, posY, posZ + j);
-									power += ForgeHooks.getEnchantPower(world, posX + k * 2, posY + 1, posZ + j);
-									power += ForgeHooks.getEnchantPower(world, posX + k, posY, posZ + j * 2);
-									power += ForgeHooks.getEnchantPower(world, posX + k, posY + 1, posZ + j * 2);
+									power += (int) ForgeHooks.getEnchantPower(world, posX + k * 2, posY, posZ + j);
+									power += (int) ForgeHooks.getEnchantPower(world, posX + k * 2, posY + 1, posZ + j);
+									power += (int) ForgeHooks.getEnchantPower(world, posX + k, posY, posZ + j * 2);
+									power += (int) ForgeHooks.getEnchantPower(world, posX + k, posY + 1, posZ + j * 2);
 								}
 							}
 
@@ -189,7 +180,7 @@ public class ContainerEnchantment extends Container {
 
 					for (j = 0; j < 3; ++j) {
 						enchantLevels[j] = EnchantmentHelper.calcItemStackEnchantability(rand, j, power, var2);
-						field_178151_h[j] = -1;
+						enchantmentIds[j] = -1;
 
 						if (enchantLevels[j] < j + 1)
 							enchantLevels[j] = 0;
@@ -197,11 +188,11 @@ public class ContainerEnchantment extends Container {
 
 					for (j = 0; j < 3; ++j)
 						if (enchantLevels[j] > 0) {
-							List<EnchantmentData> var7 = func_178148_a(var2, j, enchantLevels[j]);
+							List<EnchantmentData> var7 = getEnchantmentList(var2, j, enchantLevels[j]);
 
 							if (var7 != null && !var7.isEmpty()) {
 								EnchantmentData var6 = var7.get(rand.nextInt(var7.size()));
-								field_178151_h[j] = var6.enchantmentobj.effectId | var6.enchantmentLevel << 8;
+								enchantmentIds[j] = var6.enchantmentobj.effectId | var6.enchantmentLevel << 8;
 							}
 						}
 
@@ -210,7 +201,7 @@ public class ContainerEnchantment extends Container {
 			} else
 				for (power = 0; power < 3; ++power) {
 					enchantLevels[power] = 0;
-					field_178151_h[power] = -1;
+					enchantmentIds[power] = -1;
 				}
 		}
 	}
@@ -228,7 +219,7 @@ public class ContainerEnchantment extends Container {
 			return false;
 		} else if (enchantLevels[id] > 0 && slot0 != null && (player.experienceLevel >= var5 && player.experienceLevel >= enchantLevels[id] || player.capabilities.isCreativeMode)) {
 			if (!world.isRemote) {
-				List<EnchantmentData> var6 = func_178148_a(slot0, id, enchantLevels[id]);
+				List<EnchantmentData> var6 = getEnchantmentList(slot0, id, enchantLevels[id]);
 				boolean var7 = slot0.getItem() == Items.book;
 
 				if (var6 != null) {
@@ -236,7 +227,7 @@ public class ContainerEnchantment extends Container {
 					world.playSoundEffect(posX + 0.5F, posY + 0.5F, posZ + 0.5F, Reference.MCAssetVer + ":block.enchantment_table.use", 1.0F, world.rand.nextFloat() * 0.1F + 0.9F);
 
 					if (var7)
-						slot0.func_150996_a(Items.enchanted_book);
+						slot0.func_150996_a(Items.enchanted_book); // setItem
 
 					for (EnchantmentData var9 : var6) {
 						if (var7)
@@ -265,8 +256,7 @@ public class ContainerEnchantment extends Container {
 			return false;
 	}
 
-	@SuppressWarnings("unchecked")
-	private List<EnchantmentData> func_178148_a(ItemStack stack, int seed, int level) {
+	private List<EnchantmentData> getEnchantmentList(ItemStack stack, int seed, int level) {
 		rand.setSeed(enchantmentSeed + seed);
 		List<EnchantmentData> list = EnchantmentHelper.buildEnchantmentList(rand, stack, level);
 
@@ -276,9 +266,9 @@ public class ContainerEnchantment extends Container {
 		return list;
 	}
 
-	public int func_178147_e() {
+	public int getLapisAmount() {
 		ItemStack var1 = tableInventory.getStackInSlot(1);
-		return var1 == null ? 0 : var1.stackSize;
+		return var1 == null ? (noFuel ? Integer.MAX_VALUE : 0) : var1.stackSize;
 	}
 
 	/**
@@ -314,12 +304,12 @@ public class ContainerEnchantment extends Container {
 			var3 = var5.copy();
 
 			if (index == 0) {
+				if (!mergeItemStack(var5, 2, noFuel ? 37 : 38, true))
+					return null;
+			} else if (!noFuel && index == 1) {
 				if (!mergeItemStack(var5, 2, 38, true))
 					return null;
-			} else if (index == 1) {
-				if (!mergeItemStack(var5, 2, 38, true))
-					return null;
-			} else if (EnchantingFuelRegistry.isFuel(var5)) {
+			} else if (!noFuel && EnchantingFuelRegistry.isFuel(var5)) {
 				if (!mergeItemStack(var5, 1, 2, true))
 					return null;
 			} else {

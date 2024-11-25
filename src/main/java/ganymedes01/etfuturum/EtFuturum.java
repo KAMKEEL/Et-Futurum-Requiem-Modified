@@ -13,7 +13,6 @@ import cpw.mods.fml.common.network.simpleimpl.SimpleNetworkWrapper;
 import cpw.mods.fml.common.registry.GameRegistry;
 import cpw.mods.fml.relauncher.ReflectionHelper;
 import cpw.mods.fml.relauncher.Side;
-import cpw.mods.fml.relauncher.SideOnly;
 import ganymedes01.etfuturum.api.*;
 import ganymedes01.etfuturum.api.mappings.BasicMultiBlockSound;
 import ganymedes01.etfuturum.blocks.BlockSculk;
@@ -29,6 +28,7 @@ import ganymedes01.etfuturum.configuration.configs.*;
 import ganymedes01.etfuturum.core.handlers.WorldEventHandler;
 import ganymedes01.etfuturum.core.proxy.CommonProxy;
 import ganymedes01.etfuturum.core.utils.IInitAction;
+import ganymedes01.etfuturum.core.utils.Logger;
 import ganymedes01.etfuturum.entities.ModEntityList;
 import ganymedes01.etfuturum.items.ItemWoodSign;
 import ganymedes01.etfuturum.lib.Reference;
@@ -44,6 +44,7 @@ import ganymedes01.etfuturum.world.nether.biome.utils.NetherBiomeManager;
 import ganymedes01.etfuturum.world.nether.dimension.DimensionProviderEFRNether;
 import ganymedes01.etfuturum.world.structure.OceanMonument;
 import makamys.mclib.core.MCLib;
+import makamys.mclib.core.MCLibModules;
 import makamys.mclib.ext.assetdirector.ADConfig;
 import makamys.mclib.ext.assetdirector.AssetDirectorAPI;
 import net.minecraft.block.*;
@@ -71,16 +72,16 @@ import java.util.*;
 		modid = Reference.MOD_ID,
 		name = Reference.MOD_NAME,
 		version = Reference.VERSION_NUMBER,
-		dependencies = Reference.DEPENDENCIES,
-		guiFactory = "ganymedes01.etfuturum.configuration.ConfigGuiFactory"
+		dependencies = Reference.DEPENDENCIES
+//		guiFactory = Tags.MOD_GROUP + ".configuration.ConfigGuiFactory"
 )
 
 public class EtFuturum {
 
-	@Instance("etfuturum")
+	@Instance(Tags.MOD_ID)
 	public static EtFuturum instance;
 
-	@SidedProxy(clientSide = "ganymedes01.etfuturum.core.proxy.ClientProxy", serverSide = "ganymedes01.etfuturum.core.proxy.CommonProxy")
+	@SidedProxy(clientSide = Tags.MOD_GROUP + ".core.proxy.ClientProxy", serverSide = Tags.MOD_GROUP + ".core.proxy.CommonProxy")
 	public static CommonProxy proxy;
 
 	public static SimpleNetworkWrapper networkWrapper;
@@ -88,12 +89,14 @@ public class EtFuturum {
 	public static CreativeTabs creativeTabItems = new CreativeTabs(Reference.MOD_ID + ".items") {
 		@Override
 		public Item getTabIconItem() {
-			return ConfigBlocksItems.enableNetherite ? ModItems.NETHERITE_SCRAP.get() : ConfigBlocksItems.enablePrismarine ? ModItems.PRISMARINE_SHARD.get() : Items.magma_cream;
+			return  ModItems.RAW_ORE.isEnabled() ? ModItems.RAW_ORE.get()
+					: ModItems.NETHERITE_SCRAP.isEnabled() ? ModItems.NETHERITE_SCRAP.get()
+					: ModItems.PRISMARINE_SHARD.isEnabled() ? ModItems.PRISMARINE_SHARD.get()
+					: Items.magma_cream;
 		}
 
-		@SideOnly(Side.CLIENT)
 		@Override
-		public void displayAllReleventItems(List p_78018_1_) {
+		public void displayAllReleventItems(List<ItemStack> p_78018_1_) {
 			for (byte i = 1; i <= 3; i++) {
 				ItemStack firework = new ItemStack(Items.fireworks);
 				NBTTagCompound nbt = new NBTTagCompound();
@@ -113,12 +116,15 @@ public class EtFuturum {
 	public static CreativeTabs creativeTabBlocks = new CreativeTabs(Reference.MOD_ID + ".blocks") {
 		@Override
 		public Item getTabIconItem() {
-			return ConfigBlocksItems.enableSmoker ? Item.getItemFromBlock(ModBlocks.SMOKER.get()) : ConfigBlocksItems.enableChorusFruit ? Item.getItemFromBlock(ModBlocks.CHORUS_FLOWER.get()) : Item.getItemFromBlock(Blocks.ender_chest);
+			return ModBlocks.COPPER_BLOCK.isEnabled() ? ModBlocks.COPPER_BLOCK.getItem()
+					: ModBlocks.CHERRY_LOG.isEnabled() ? ModBlocks.CHERRY_LOG.getItem()
+					: ModBlocks.SMOKER.isEnabled() ? ModBlocks.SMOKER.getItem()
+					: ModBlocks.CHORUS_FLOWER.isEnabled() ? ModBlocks.CHORUS_FLOWER.getItem()
+					: Item.getItemFromBlock(Blocks.ender_chest);
 		}
 
-		@SideOnly(Side.CLIENT)
 		@Override
-		public void displayAllReleventItems(List list) {
+		public void displayAllReleventItems(List<ItemStack> list) {
 			list.add(new ItemStack(Blocks.mob_spawner));
 			super.displayAllReleventItems(list);
 
@@ -136,7 +142,7 @@ public class EtFuturum {
 			//Add the sign items back but in a way so they are sorted by their block ID instead of their item ID.
 			//This allows them to be in the correct place instead of always at the bottom of the block ID list, since item IDs are always above block IDs
 			for (ModItems sign : ModItems.OLD_SIGN_ITEMS) {
-				for (ItemStack stack : (List<ItemStack>) list) {
+				for (ItemStack stack : list) {
 					if (Item.getIdFromItem(stack.getItem()) > Block.getIdFromBlock(((ItemWoodSign) sign.get()).getSignBlock())) {
 						list.add(list.indexOf(stack), sign.newItemStack());
 						break;
@@ -148,6 +154,10 @@ public class EtFuturum {
 
 	@EventHandler
 	public void onConstruction(FMLConstructionEvent event) {
+		if(Reference.SNAPSHOT_BUILD && !Reference.DEV_ENVIRONMENT) {
+			Logger.info(Reference.MOD_ID + " is in snapshot mode. Disabling update checker... Other features may also be different.");
+		}
+
 		MCLib.init();
 
 		ADConfig config = new ADConfig();
@@ -161,6 +171,7 @@ public class EtFuturum {
 	private Field fortressWeightedField;
 
 	@EventHandler
+	@SuppressWarnings("unchecked")
 	public void preInit(FMLPreInitializationEvent event) {
 		try {
 			Field chestInfo = ChestGenHooks.class.getDeclaredField("chestInfo");
@@ -222,35 +233,15 @@ public class EtFuturum {
 		networkWrapper.registerMessage(StartElytraFlyingHandler.class, StartElytraFlyingMessage.class, 6, Side.SERVER);
 		networkWrapper.registerMessage(AttackYawHandler.class, AttackYawMessage.class, 7, Side.CLIENT);
 
-		setupModMeta(event.getModMetadata());
+		if (!Reference.SNAPSHOT_BUILD && !Reference.DEV_ENVIRONMENT) {
+			MCLibModules.updateCheckAPI.submitModTask(Reference.MOD_ID, Reference.VERSION_NUMBER, Reference.VERSION_URL);
+		}
 
 		CompatMisc.runModHooksPreInit();
-	}
 
-	private void setupModMeta(ModMetadata meta) {
-		//Define mod data here instead of in mcmod.info, adapted from Village Names.
-		//Thanks AstroTibs!
-		//Updated by Makamys to use mcmod.info again but also have color values without glitches.
-
-		meta.autogenerated = false; // stops it from complaining about missing mcmod.info
-
-		meta.name = "\u00a75\u00a7o" + Reference.MOD_NAME; // name 
-
-		String buildVer = Reference.BUILD_VERSION = meta.version;
-		Reference.SNAPSHOT_BUILD = buildVer.toLowerCase().contains("snapshot") || buildVer.contains("alpha") || buildVer.toLowerCase().contains("beta") || buildVer.toLowerCase().contains("rc");
-		meta.version = "\u00a7e" + meta.version; // version (read from mcmod.info)
-
-		meta.credits = Reference.CREDITS; // credits 
-
-		meta.authorList.clear();
-		meta.authorList.addAll(Arrays.asList(Reference.AUTHOR_LIST)); // authorList - added as a list
-
-		meta.url = Reference.MOD_URL;
-
-		meta.description = Reference.DESCRIPTION; // description
-
-
-		meta.logoFile = Reference.LOGO_FILE;
+		if(ModsList.RPLE.isLoaded()) {
+			CompatRPLEEventHandler.registerRPLECompat();
+		}
 	}
 
 	@EventHandler
@@ -290,6 +281,7 @@ public class EtFuturum {
 	}
 
 	@EventHandler
+	@SuppressWarnings("unchecked")
 	public void postInit(FMLPostInitializationEvent event) {
 		if (ConfigFunctions.enableUpdatedFoodValues) {
 			((ItemFood) Items.carrot).healAmount = 3;
@@ -371,6 +363,7 @@ public class EtFuturum {
 	}
 
 	@EventHandler
+	@SuppressWarnings("unchecked")
 	public void onLoadComplete(FMLLoadCompleteEvent e) {
 		for (ModBlocks block : ModBlocks.values()) {
 			if (block.isEnabled() && block.get() instanceof IInitAction) {
@@ -450,22 +443,57 @@ public class EtFuturum {
 	}
 
 	private void setupMultiBlockSoundRegistry() {
-		{
-			BasicMultiBlockSound mbs = new BasicMultiBlockSound();
-			mbs.setTypes(6, ModSounds.soundNetherBricks);
-			mbs.setTypes(14, ModSounds.soundNetherBricks);
-			MultiBlockSoundRegistry.multiBlockSounds.put(Blocks.stone_slab, mbs);
-			MultiBlockSoundRegistry.multiBlockSounds.put(Blocks.double_stone_slab, mbs);
+		MultiBlockSoundRegistry.addBasic(Blocks.stone_slab, ModSounds.soundNetherBricks, 6, 14);
+		MultiBlockSoundRegistry.addBasic(Blocks.double_stone_slab, ModSounds.soundNetherBricks, 6, 14);
+
+		MultiBlockSoundRegistry.addBasic(ExternalContent.Blocks.TCON_MULTIBRICK.get(), ModSounds.soundNetherrack, 2);
+		MultiBlockSoundRegistry.addBasic(ExternalContent.Blocks.TCON_MULTIBRICK.get(), ModSounds.soundBoneBlock, 9);
+		MultiBlockSoundRegistry.addBasic(ExternalContent.Blocks.TCON_MULTIBRICK_FANCY.get(), ModSounds.soundNetherrack, 2);
+		MultiBlockSoundRegistry.addBasic(ExternalContent.Blocks.TCON_MULTIBRICK_FANCY.get(), ModSounds.soundBoneBlock, 9);
+
+		MultiBlockSoundRegistry.addBasic(ModBlocks.DEEPSLATE_BRICK_WALL.get(), ModSounds.soundDeepslateTiles, 1);
+		MultiBlockSoundRegistry.addBasic(ModBlocks.DEEPSLATE_BRICKS.get(), ModSounds.soundDeepslateTiles, 2, 3);
+		MultiBlockSoundRegistry.addBasic(ModBlocks.DEEPSLATE_BRICK_SLAB.get(), ModSounds.soundDeepslateTiles, 1, 9);
+
+		MultiBlockSoundRegistry.addBasic(ModBlocks.TUFF.get(), ModSounds.soundPolishedTuff, 1);
+		MultiBlockSoundRegistry.addBasic(ModBlocks.TUFF.get(), ModSounds.soundTuffBricks, 2, 4);
+		MultiBlockSoundRegistry.addBasic(ModBlocks.TUFF_WALL.get(), ModSounds.soundPolishedTuff, 1);
+		MultiBlockSoundRegistry.addBasic(ModBlocks.TUFF_WALL.get(), ModSounds.soundTuffBricks, 2);
+		MultiBlockSoundRegistry.addBasic(ModBlocks.TUFF_SLAB.get(), ModSounds.soundPolishedTuff, 1, 9);
+		MultiBlockSoundRegistry.addBasic(ModBlocks.TUFF_SLAB.get(), ModSounds.soundTuffBricks, 2, 10);
+		MultiBlockSoundRegistry.addBasic(ModBlocks.DOUBLE_TUFF_SLAB.get(), ModSounds.soundPolishedTuff, 1, 9);
+		MultiBlockSoundRegistry.addBasic(ModBlocks.DOUBLE_TUFF_SLAB.get(), ModSounds.soundTuffBricks, 2, 10);
+
+		MultiBlockSoundRegistry.addBasic(ModBlocks.AMETHYST_CLUSTER_1.get(), ModSounds.soundAmethystBudSmall, 0, 1, 2, 3, 4, 5, 6);
+		MultiBlockSoundRegistry.addBasic(ModBlocks.AMETHYST_CLUSTER_2.get(), ModSounds.soundAmethystBudLrg, 0, 1, 2, 3, 4, 5, 6);
+
+		MultiBlockSoundRegistry.addBasic(ModBlocks.SPONGE.get(), ModSounds.soundWetSponge, 1);
+		MultiBlockSoundRegistry.addBasic(Blocks.sponge, ModSounds.soundWetSponge, 1);
+
+		MultiBlockSoundRegistry.addBasic(ModBlocks.SAPLING.get(), ModSounds.soundCherrySapling, 1, 9);
+		MultiBlockSoundRegistry.addBasic(ModBlocks.LEAVES.get(), ModSounds.soundCherryLeaves, 1, 5, 9, 13);
+
+		MultiBlockSoundRegistry.addBasic(ModBlocks.WOOD_PLANKS.get(), ModSounds.soundNetherWood, 0, 1);
+		MultiBlockSoundRegistry.addBasic(ModBlocks.WOOD_PLANKS.get(), ModSounds.soundCherryWood, 3);
+		MultiBlockSoundRegistry.addBasic(ModBlocks.WOOD_PLANKS.get(), ModSounds.soundBambooWood, 4);
+		MultiBlockSoundRegistry.addBasic(ModBlocks.WOOD_FENCE.get(), ModSounds.soundNetherWood, 0, 1);
+		MultiBlockSoundRegistry.addBasic(ModBlocks.WOOD_FENCE.get(), ModSounds.soundCherryWood, 3);
+		MultiBlockSoundRegistry.addBasic(ModBlocks.WOOD_FENCE.get(), ModSounds.soundBambooWood, 4);
+
+		MultiBlockSoundRegistry.addBasic(ModBlocks.WOOD_SLAB.get(), ModSounds.soundNetherWood, 0, 1, 8, 9);
+		MultiBlockSoundRegistry.addBasic(ModBlocks.WOOD_SLAB.get(), ModSounds.soundCherryWood, 3, 11);
+		MultiBlockSoundRegistry.addBasic(ModBlocks.WOOD_SLAB.get(), ModSounds.soundBambooWood, 4, 12);
+		MultiBlockSoundRegistry.addBasic(ModBlocks.DOUBLE_WOOD_SLAB.get(), ModSounds.soundNetherWood, 0, 1, 8, 9);
+		MultiBlockSoundRegistry.addBasic(ModBlocks.DOUBLE_WOOD_SLAB.get(), ModSounds.soundCherryWood, 3, 11);
+		MultiBlockSoundRegistry.addBasic(ModBlocks.DOUBLE_WOOD_SLAB.get(), ModSounds.soundBambooWood, 4, 12);
+
+		MultiBlockSoundRegistry.addBasic(ModBlocks.PACKED_MUD.get(), ModSounds.soundMudBricks, 1);
+
+		if(ModsList.IRON_CHEST.isLoaded() && ModsList.IRON_CHEST.isVersionNewerOrEqual("6.0.78")) { // Version netherite chests were added in
+			MultiBlockSoundRegistry.addBasic(ExternalContent.Blocks.IRON_CHEST.get(), ModSounds.soundNetherite, 8);
 		}
 
-		if (ModsList.TINKERS_CONSTRUCT.isLoaded()) {
-			{
-				BasicMultiBlockSound mbs = new BasicMultiBlockSound();
-				mbs.setTypes(2, ModSounds.soundNetherrack);
-				mbs.setTypes(9, ModSounds.soundBoneBlock);
-				MultiBlockSoundRegistry.multiBlockSounds.put(GameRegistry.findBlock("TConstruct", "decoration.multibrick"), mbs);
-				MultiBlockSoundRegistry.multiBlockSounds.put(GameRegistry.findBlock("TConstruct", "decoration.multibrickfancy"), mbs);
-			}
+		if (ExternalContent.Blocks.TCON_METAL.get() != null) {
 			{
 				BasicMultiBlockSound mbs = new BasicMultiBlockSound() {
 					@Override
@@ -476,111 +504,10 @@ public class EtFuturum {
 						return 1;
 					}
 				};
-				mbs.setTypes(3, ModSounds.soundCopper);
-				mbs.setTypes(5, ModSounds.soundCopper);
-				MultiBlockSoundRegistry.multiBlockSounds.put(GameRegistry.findBlock("TConstruct", "MetalBlock"), mbs);
+				mbs.setTypes(ModSounds.soundCopper, 3);
+				mbs.setTypes(ModSounds.soundCopper, 5);
+				MultiBlockSoundRegistry.multiBlockSounds.put(ExternalContent.Blocks.TCON_METAL.get(), mbs);
 			}
-		}
-
-		if (ModBlocks.DEEPSLATE_BRICK_WALL.isEnabled()) {
-			BasicMultiBlockSound mbs = new BasicMultiBlockSound();
-			mbs.setTypes(1, ModSounds.soundDeepslateTiles);
-			MultiBlockSoundRegistry.multiBlockSounds.put(ModBlocks.DEEPSLATE_BRICK_WALL.get(), mbs);
-		}
-
-		if (ModBlocks.DEEPSLATE_BRICKS.isEnabled()) {
-			BasicMultiBlockSound mbs = new BasicMultiBlockSound();
-			mbs.setTypes(2, ModSounds.soundDeepslateTiles);
-			mbs.setTypes(3, ModSounds.soundDeepslateTiles);
-			MultiBlockSoundRegistry.multiBlockSounds.put(ModBlocks.DEEPSLATE_BRICKS.get(), mbs);
-		}
-
-		if (ModBlocks.DEEPSLATE_BRICK_SLAB.isEnabled()) {
-			BasicMultiBlockSound mbs = new BasicMultiBlockSound();
-			mbs.setTypes(1, ModSounds.soundDeepslateTiles);
-			mbs.setTypes(9, ModSounds.soundDeepslateTiles);
-			MultiBlockSoundRegistry.multiBlockSounds.put(ModBlocks.DEEPSLATE_BRICK_SLAB.get(), mbs);
-		}
-
-		if (ModBlocks.AMETHYST_CLUSTER_1.isEnabled()) {
-			BasicMultiBlockSound mbs = new BasicMultiBlockSound();
-			for (int i = 0; i < 6; i++) {
-				mbs.setTypes(i, ModSounds.soundAmethystBudSmall);
-			}
-			MultiBlockSoundRegistry.multiBlockSounds.put(ModBlocks.AMETHYST_CLUSTER_1.get(), mbs);
-		}
-
-		if (ModBlocks.AMETHYST_CLUSTER_2.isEnabled()) {
-			BasicMultiBlockSound mbs = new BasicMultiBlockSound();
-			for (int i = 0; i < 6; i++) {
-				mbs.setTypes(i, ModSounds.soundAmethystBudLrg);
-			}
-			MultiBlockSoundRegistry.multiBlockSounds.put(ModBlocks.AMETHYST_CLUSTER_2.get(), mbs);
-		}
-
-		if (ModBlocks.SPONGE.isEnabled()) {
-			BasicMultiBlockSound mbs = new BasicMultiBlockSound();
-			mbs.setTypes(1, ModSounds.soundWetSponge);
-			MultiBlockSoundRegistry.multiBlockSounds.put(ModBlocks.SPONGE.get(), mbs);
-		}
-
-		if (ModBlocks.SAPLING.isEnabled()) {
-			BasicMultiBlockSound mbs = new BasicMultiBlockSound();
-			mbs.setTypes(1, ModSounds.soundCherrySapling);
-			mbs.setTypes(9, ModSounds.soundCherrySapling);
-			MultiBlockSoundRegistry.multiBlockSounds.put(ModBlocks.SAPLING.get(), mbs);
-		}
-
-		if (ModBlocks.LEAVES.isEnabled()) {
-			BasicMultiBlockSound mbs = new BasicMultiBlockSound();
-			mbs.setTypes(1, ModSounds.soundCherryLeaves);
-			mbs.setTypes(5, ModSounds.soundCherryLeaves);
-			mbs.setTypes(9, ModSounds.soundCherryLeaves);
-			mbs.setTypes(13, ModSounds.soundCherryLeaves);
-			MultiBlockSoundRegistry.multiBlockSounds.put(ModBlocks.LEAVES.get(), mbs);
-		}
-
-		{
-			BasicMultiBlockSound mbs = new BasicMultiBlockSound();
-			mbs.setTypes(0, ModSounds.soundNetherWood);
-			mbs.setTypes(1, ModSounds.soundNetherWood);
-			mbs.setTypes(3, ModSounds.soundCherryWood);
-			mbs.setTypes(4, ModSounds.soundBambooWood);
-
-			if (ModBlocks.WOOD_PLANKS.isEnabled()) {
-				MultiBlockSoundRegistry.multiBlockSounds.put(ModBlocks.WOOD_PLANKS.get(), mbs);
-			}
-
-			if (ModBlocks.WOOD_FENCE.isEnabled()) {
-				MultiBlockSoundRegistry.multiBlockSounds.put(ModBlocks.WOOD_FENCE.get(), mbs);
-			}
-		}
-
-		{
-			BasicMultiBlockSound mbs = new BasicMultiBlockSound();
-			mbs.setTypes(0, ModSounds.soundNetherWood);
-			mbs.setTypes(1, ModSounds.soundNetherWood);
-			mbs.setTypes(3, ModSounds.soundCherryWood);
-			mbs.setTypes(4, ModSounds.soundBambooWood);
-
-			mbs.setTypes(8, ModSounds.soundNetherWood);
-			mbs.setTypes(9, ModSounds.soundNetherWood);
-			mbs.setTypes(11, ModSounds.soundCherryWood);
-			mbs.setTypes(12, ModSounds.soundBambooWood);
-
-			if (ModBlocks.WOOD_SLAB.isEnabled()) {
-				MultiBlockSoundRegistry.multiBlockSounds.put(ModBlocks.WOOD_SLAB.get(), mbs);
-			}
-
-			if (ModBlocks.DOUBLE_WOOD_SLAB.isEnabled()) {
-				MultiBlockSoundRegistry.multiBlockSounds.put(ModBlocks.DOUBLE_WOOD_SLAB.get(), mbs);
-			}
-		}
-
-		if (ModBlocks.PACKED_MUD.isEnabled()) {
-			BasicMultiBlockSound mbs = new BasicMultiBlockSound();
-			mbs.setTypes(1, ModSounds.soundMudBricks);
-			MultiBlockSoundRegistry.multiBlockSounds.put(ModBlocks.PACKED_MUD.get(), mbs);
 		}
 	}
 
@@ -752,7 +679,7 @@ public class EtFuturum {
 				case 0:
 					return new PotionEffect(Potion.nightVision.id, 100, 0);
 				case 1:
-					return new PotionEffect(Potion.field_76443_y.id, 7, 0);
+					return new PotionEffect(Potion.field_76443_y.id, 7, 0); // saturation
 				case 2:
 					return new PotionEffect(Potion.fireResistance.id, 80, 0);
 				case 3:
@@ -768,7 +695,7 @@ public class EtFuturum {
 		}
 
 		if (item == Item.getItemFromBlock(Blocks.yellow_flower)) {
-			return new PotionEffect(Potion.field_76443_y.id, 7, 0);
+			return new PotionEffect(Potion.field_76443_y.id, 7, 0); // saturation
 		}
 
 		if (item == Item.getItemFromBlock(ModBlocks.CORNFLOWER.get())) {
@@ -985,6 +912,13 @@ public class EtFuturum {
 		config.addSoundEvent(ver, "block.beehive.work", "neutral");
 		config.addSoundEvent(ver, "block.beehive.shear", "player");
 		config.addSoundEvent(ver, "block.sponge.absorb", "block");
+		config.addSoundEvent(ver, "block.copper_bulb.turn_on", "block");
+		config.addSoundEvent(ver, "block.copper_bulb.turn_off", "block");
+		config.addSoundEvent(ver, "block.bubble_column.bubble_pop", "block");
+		config.addSoundEvent(ver, "block.bubble_column.upwards_ambient", "block");
+		config.addSoundEvent(ver, "block.bubble_column.upwards_inside", "neutral");
+		config.addSoundEvent(ver, "block.bubble_column.whirlpool_ambient", "block");
+		config.addSoundEvent(ver, "block.bubble_column.whirlpool_inside", "neutral");
 
 		config.addSoundEvent(ver, "block.fence_gate.open", "block");
 		config.addSoundEvent(ver, "block.fence_gate.close", "block");
@@ -1005,6 +939,8 @@ public class EtFuturum {
 		config.addSoundEvent(ver, "block.bamboo_wood_door.close", "block");
 		config.addSoundEvent(ver, "block.iron_door.open", "block");
 		config.addSoundEvent(ver, "block.iron_door.close", "block");
+		config.addSoundEvent(ver, "block.copper_door.open", "block");
+		config.addSoundEvent(ver, "block.copper_door.close", "block");
 
 		config.addSoundEvent(ver, "block.wooden_trapdoor.open", "block");
 		config.addSoundEvent(ver, "block.wooden_trapdoor.close", "block");
@@ -1016,6 +952,8 @@ public class EtFuturum {
 		config.addSoundEvent(ver, "block.bamboo_wood_trapdoor.close", "block");
 		config.addSoundEvent(ver, "block.iron_trapdoor.open", "block");
 		config.addSoundEvent(ver, "block.iron_trapdoor.close", "block");
+		config.addSoundEvent(ver, "block.copper_trapdoor.open", "block");
+		config.addSoundEvent(ver, "block.copper_trapdoor.close", "block");
 
 		config.addSoundEvent(ver, "block.wooden_button.click_off", "block");
 		config.addSoundEvent(ver, "block.wooden_button.click_on", "block");
@@ -1042,8 +980,8 @@ public class EtFuturum {
 			if (sound.getStepResourcePath().startsWith(Reference.MCAssetVer)) { //Step sound
 				config.addSoundEvent(ver, sound.getStepResourcePath().substring(Reference.MCAssetVer.length() + 1), "neutral");
 			}
-			if (sound.func_150496_b().startsWith(Reference.MCAssetVer)) { //Place sound
-				config.addSoundEvent(ver, sound.func_150496_b().substring(Reference.MCAssetVer.length() + 1), "block");
+			if (sound.func_150496_b/*getPlaceSound*/().startsWith(Reference.MCAssetVer)) { //Place sound
+				config.addSoundEvent(ver, sound.func_150496_b/*getPlaceSound*/().substring(Reference.MCAssetVer.length() + 1), "block");
 			}
 			if (sound.getBreakSound().startsWith(Reference.MCAssetVer)) { //Break sound
 				config.addSoundEvent(ver, sound.getBreakSound().substring(Reference.MCAssetVer.length() + 1), "block");

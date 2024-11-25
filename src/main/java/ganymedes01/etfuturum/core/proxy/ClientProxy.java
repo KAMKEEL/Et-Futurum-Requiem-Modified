@@ -17,7 +17,6 @@ import ganymedes01.etfuturum.client.subtitle.GuiSubtitles;
 import ganymedes01.etfuturum.configuration.configs.ConfigFunctions;
 import ganymedes01.etfuturum.configuration.configs.ConfigMixins;
 import ganymedes01.etfuturum.core.handlers.ClientEventHandler;
-import ganymedes01.etfuturum.core.utils.VersionChecker;
 import ganymedes01.etfuturum.entities.*;
 import ganymedes01.etfuturum.lib.Reference;
 import ganymedes01.etfuturum.lib.RenderIDs;
@@ -58,10 +57,6 @@ public class ClientProxy extends CommonProxy {
 			MinecraftForge.EVENT_BUS.register(GuiSubtitles.INSTANCE);
 		}
 
-		if (ConfigFunctions.enableUpdateChecker && !Reference.SNAPSHOT_BUILD && !Reference.DEV_ENVIRONMENT) {
-			FMLCommonHandler.instance().bus().register(VersionChecker.instance);
-		}
-
 		MinecraftForge.EVENT_BUS.register(BiomeFogEventHandler.INSTANCE);
 	}
 
@@ -77,10 +72,12 @@ public class ClientProxy extends CommonProxy {
 		MinecraftForgeClient.registerItemRenderer(Items.skull, new ItemSkullRenderer());
 		MinecraftForgeClient.registerItemRenderer(Items.bow, new ItemBowRenderer());
 		MinecraftForgeClient.registerItemRenderer(Item.getItemFromBlock(ModBlocks.SHULKER_BOX.get()), new ItemShulkerBoxRenderer());
-		MinecraftForgeClient.registerItemRenderer(Items.bed, new Item3DBedRenderer((BlockBed) Blocks.bed));
-		for (ModBlocks bed : ModBlocks.BEDS) {
-			if (bed.isEnabled()) {
-				MinecraftForgeClient.registerItemRenderer(bed.getItem(), new Item3DBedRenderer((BlockBed) bed.get()));
+		if (ConfigFunctions.inventoryBedModels) {
+			MinecraftForgeClient.registerItemRenderer(Items.bed, new Item3DBedRenderer((BlockBed) Blocks.bed));
+			for (ModBlocks bed : ModBlocks.BEDS) {
+				if (bed.isEnabled()) {
+					MinecraftForgeClient.registerItemRenderer(bed.getItem(), new Item3DBedRenderer((BlockBed) bed.get()));
+				}
 			}
 		}
 	}
@@ -119,6 +116,7 @@ public class ClientProxy extends CommonProxy {
 		RenderingRegistry.registerBlockHandler(new BlockMangroveRootsRenderer(RenderIDs.MANGROVE_ROOTS));
 		RenderingRegistry.registerBlockHandler(new BlockPinkPetalsRenderer(RenderIDs.PINK_PETALS));
 		RenderingRegistry.registerBlockHandler(new BlockBambooRenderer(RenderIDs.BAMBOO));
+		RenderingRegistry.registerBlockHandler(new BlockBubbleColumnRenderer(RenderIDs.BUBBLE_COLUMN));
 
 		RenderingRegistry.registerBlockHandler(new BlockEmissiveLayerRenderer(RenderIDs.EMISSIVE_DOUBLE_LAYER));
 	}
@@ -150,8 +148,8 @@ public class ClientProxy extends CommonProxy {
 		if (ConfigFunctions.enablePlayerSkinOverlay) {
 			TextureManager texManager = Minecraft.getMinecraft().renderEngine;
 			File skinFolder = new File(Minecraft.getMinecraft().fileAssets, "skins");
-			MinecraftSessionService sessionService = Minecraft.getMinecraft().func_152347_ac();
-			Minecraft.getMinecraft().field_152350_aA = new NewSkinManager(Minecraft.getMinecraft().func_152342_ad(), texManager, skinFolder, sessionService);
+			MinecraftSessionService sessionService = Minecraft.getMinecraft().func_152347_ac(); // getSessionService
+			Minecraft.getMinecraft().field_152350_aA/*skinManager*/ = new NewSkinManager(Minecraft.getMinecraft().func_152342_ad()/*getSkinManager*/, texManager, skinFolder, sessionService);
 
 			RenderManager.instance.entityRenderMap.put(EntityPlayer.class, new NewRenderPlayer());
 		}

@@ -88,10 +88,11 @@ public class WorldGenGeode extends WorldGenerator {
 	 * Note: Original variable locations are left as comments above the respective variable to make it easier to backtrack through the vanilla 1.17 code.
 	 * Some of them use a number provider to do .get to get a number in the range. If this would get two numbers I used nextBoolean() instead to be faster.
 	 */
+	@Override
 	public boolean generate(World world, Random random, int x, int y, int z) {
 		BlockPos blockPos = new BlockPos(x, y, z);
 		List<Pair<BlockPos, Integer>> list = Lists.newLinkedList();
-		int distPoint = getRandom(distributionPoints, random);
+		int distPoint = Utils.getRandom(distributionPoints, random);
 		DoublePerlinNoiseSampler doublePerlinNoiseSampler = DoublePerlinNoiseSampler.create(random, -4, 1.0D);//Somehow this was (double[])(1.0D) which doesn't make sense. Decompiler weirdism?
 		List<BlockPos> list2 = Lists.newLinkedList();
 		double outerWallMaxDiv = (double) distPoint / (double) outerWallDistance[outerWallDistance.length - 1];
@@ -106,9 +107,9 @@ public class WorldGenGeode extends WorldGenerator {
 		int s;
 		BlockPos blockPos6;
 		for (int r = 0; r < distPoint; ++r) {
-			s = getRandom(outerWallDistance, random);
-			int p = getRandom(outerWallDistance, random);
-			int q = getRandom(outerWallDistance, random);
+			s = Utils.getRandom(outerWallDistance, random);
+			int p = Utils.getRandom(outerWallDistance, random);
+			int q = Utils.getRandom(outerWallDistance, random);
 			blockPos6 = blockPos.add(s, p, q);
 			if (isInvalidCorner(world, blockPos6.getX(), blockPos6.getY(), blockPos6.getZ())) {
 				++m;
@@ -117,32 +118,32 @@ public class WorldGenGeode extends WorldGenerator {
 				}
 			}
 
-			list.add(Pair.of(blockPos6, getRandom(pointOffset, random)));
+			list.add(Pair.of(blockPos6, Utils.getRandom(pointOffset, random)));
 		}
 
 		if (generateCrack) {
 			s = distPoint * 2 + 1;
-			switch(random.nextInt(4)) {
+			switch (random.nextInt(4)) {
 				case 0:
 					list2.add(blockPos.add(s, 7, 0));
 					list2.add(blockPos.add(s, 5, 0));
 					list2.add(blockPos.add(s, 1, 0));
-				break;
+					break;
 				case 1:
 					list2.add(blockPos.add(0, 7, s));
 					list2.add(blockPos.add(0, 5, s));
 					list2.add(blockPos.add(0, 1, s));
-				break;
+					break;
 				case 2:
 					list2.add(blockPos.add(s, 7, s));
 					list2.add(blockPos.add(s, 5, s));
 					list2.add(blockPos.add(s, 1, s));
-				break;
+					break;
 				case 3:
 					list2.add(blockPos.add(0, 7, 0));
 					list2.add(blockPos.add(0, 5, 0));
 					list2.add(blockPos.add(0, 1, 0));
-				break;
+					break;
 			}
 		}
 
@@ -181,13 +182,13 @@ public class WorldGenGeode extends WorldGenerator {
 
 				Iterator<Pair<BlockPos, Integer>> var40;
 				Pair<BlockPos, Integer> pair;
-				for (var40 = list.iterator(); var40.hasNext(); currentLayerSqrt += Utils.fastInverseSqrt(blockPos3.getSquaredDistance(pair.getLeft()) + (double) pair.getRight()) + t) {
+				for (var40 = list.iterator(); var40.hasNext(); currentLayerSqrt += Utils.invSqrt(blockPos3.getSquaredDistance(pair.getLeft()) + (double) pair.getRight()) + t) {
 					pair = var40.next();
 				} //Almost deleted this code for being unused, but the variable in the for loop is vital to later parts of the code.
 
 				BlockPos blockPos4;
 				Iterator<BlockPos> var41;
-				for (var41 = list2.iterator(); var41.hasNext(); v += Utils.fastInverseSqrt(blockPos3.getSquaredDistance(blockPos4) + (double) crackPointOffset) + t) {
+				for (var41 = list2.iterator(); var41.hasNext(); v += Utils.invSqrt(blockPos3.getSquaredDistance(blockPos4) + (double) crackPointOffset) + t) {
 					blockPos4 = var41.next();
 				} //Almost deleted this code for being unused, but the variable in the for loop is vital to later parts of the code.
 			} while (currentLayerSqrt < outerLayerSqrt);
@@ -217,12 +218,5 @@ public class WorldGenGeode extends WorldGenerator {
 				}
 			}
 		}
-	}
-
-	/*
-	 * Temporary until I can figure out how to do <T> for array[]s and I'll move this to Utils.
-	 */
-	private static int getRandom(int[] list, Random rand) {
-		return list[rand.nextInt(list.length)];
 	}
 }

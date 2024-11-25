@@ -32,8 +32,6 @@ public class BlockEmissiveLayerRenderer extends BlockModelBase {
 			return;
 		}
 
-		final Tessellator tessellator = Tessellator.instance;
-
 		boolean emissiveLayerAbove = ((IEmissiveLayerBlock) block).isSecondLayerAbove(meta);
 
 		renderStandardInventoryCubeEmissive(block, meta, modelId, renderer, !emissiveLayerAbove, minX, minY, minZ, maxX, maxY, maxZ);
@@ -121,7 +119,7 @@ public class BlockEmissiveLayerRenderer extends BlockModelBase {
 		return true;
 	}
 
-	private static Point2f lastBrightness = new Point2f(0, 0);
+	private static final Point2f lastBrightness = new Point2f(0, 0);
 
 
 	public static void setLighting(int lighting) {

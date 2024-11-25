@@ -1,5 +1,6 @@
 package ganymedes01.etfuturum.blocks;
 
+import com.google.common.collect.Maps;
 import cpw.mods.fml.relauncher.Side;
 import cpw.mods.fml.relauncher.SideOnly;
 import ganymedes01.etfuturum.EtFuturum;
@@ -7,8 +8,12 @@ import ganymedes01.etfuturum.core.utils.Utils;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockFenceGate;
 import net.minecraft.block.BlockWall;
+import net.minecraft.block.material.MapColor;
+import net.minecraft.block.material.Material;
+import net.minecraft.client.renderer.texture.IIconRegister;
 import net.minecraft.creativetab.CreativeTabs;
 import net.minecraft.entity.Entity;
+import net.minecraft.init.Blocks;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.util.IIcon;
@@ -16,54 +21,79 @@ import net.minecraft.world.IBlockAccess;
 import net.minecraft.world.World;
 
 import java.util.List;
+import java.util.Map;
 
 public class BaseWall extends BlockWall implements ISubBlocksBlock {
 
-	private final Block[] blocks;
-	private final int[] metas;
-	private final String[] names;
+	private IIcon[] icons;
+	private final String[] types;
 
-	public int variations;
+	private Block mapColorBase;
 
-	public BaseWall(String string, Block[] blocks, int[] metas, String[] names) {
-		super(blocks[0]);
-		this.blocks = blocks;
-		this.metas = metas;
-		variations = blocks.length;
-		setStepSound(blocks[0].stepSound);
+	public BaseWall(Material material, String... names) {
+		super(Blocks.stone); //Dummy value, we really don't care what we put here because we're not using this value
+		blockMaterial = material;
+		this.types = names;
+		setNames(names[0].replace("bricks", "brick").replace("tiles", "tile") + "_wall");
 		setCreativeTab(EtFuturum.creativeTabBlocks);
-		setBlockName(Utils.getUnlocalisedName(string));
-		this.names = names == null ? new String[]{getUnlocalizedName().substring(6 + getNameDomain().length())} : names;
 	}
 
-	@SideOnly(Side.CLIENT)
-	public IIcon getIcon(int p_149691_1_, int p_149691_2_) {
-		return blocks[p_149691_2_ % variations].getIcon(p_149691_1_, metas[p_149691_2_ % variations]);
+	@Override
+	public IIcon[] getIcons() {
+		return icons;
 	}
 
-	@SideOnly(Side.CLIENT)
-	public void getSubBlocks(Item p_149666_1_, CreativeTabs p_149666_2_, List p_149666_3_) {
-		for (int i = 0; i < blocks.length; i++) {
-			p_149666_3_.add(new ItemStack(p_149666_1_, 1, i));
+	protected void setIcons(IIcon[] icons) {
+		this.icons = icons;
+	}
+
+	@Override
+	public String[] getTypes() {
+		return types;
+	}
+
+	@Override
+	public String getNameFor(ItemStack stack) {
+		String type = getTypes()[Math.max(0, (stack.getItemDamage()) % getTypes().length)];
+		type = ("".equals(type) ? getUnlocalizedName().replace("tile.", "").replace(getNameDomain() + ".", "") : type);
+		if (type.toLowerCase().endsWith("bricks") || type.toLowerCase().endsWith("tiles")) {
+			type = type.substring(0, type.length() - 1);
 		}
-	}
-
-	public boolean canConnectWallTo(IBlockAccess p_150091_1_, int p_150091_2_, int p_150091_3_, int p_150091_4_) {
-		Block block = p_150091_1_.getBlock(p_150091_2_, p_150091_3_, p_150091_4_);
-		return block instanceof BlockFenceGate || block instanceof BaseWall || super.canConnectWallTo(p_150091_1_, p_150091_2_, p_150091_3_, p_150091_4_);
-	}
-
-	public float getBlockHardness(World p_149712_1_, int p_149712_2_, int p_149712_3_, int p_149712_4_) {
-		return blocks[p_149712_1_.getBlockMetadata(p_149712_2_, p_149712_3_, p_149712_4_) % variations].getBlockHardness(p_149712_1_, p_149712_2_, p_149712_3_, p_149712_4_);
-	}
-
-	public float getExplosionResistance(Entity par1Entity, World world, int x, int y, int z, double explosionX, double explosionY, double explosionZ) {
-		return blocks[world.getBlockMetadata(x, y, z) % variations].getExplosionResistance(par1Entity, world, x, y, z, explosionX, explosionY, explosionZ) / 5;
+		return type + "_wall";
 	}
 
 	@Override
 	public int damageDropped(int meta) {
-		return meta % variations;
+		return meta % getTypes().length;
+	}
+
+	@Override
+	public void getSubBlocks(Item item, CreativeTabs tab, List<ItemStack> list) {
+		for (int i = 0; i < getTypes().length; i++) {
+			list.add(new ItemStack(item, 1, i));
+		}
+	}
+
+	@Override
+	public IIcon getIcon(int side, int meta) {
+		return getIcons()[meta % icons.length];
+	}
+
+	@Override
+	@SideOnly(Side.CLIENT)
+	public void registerBlockIcons(IIconRegister reg) {
+		setIcons(new IIcon[getTypes().length]);
+		for (int i = 0; i < getIcons().length; i++) {
+			getIcons()[i] = "".equals(getTypes()[i]) ? reg.registerIcon(getTextureName()) :
+					reg.registerIcon((getTextureDomain().isEmpty() ? "" : getTextureDomain() + ":")
+							+ (getTextureSubfolder().isEmpty() ? "" : getTextureSubfolder() + "/") + getTypes()[i]);
+		}
+	}
+
+	@Override
+	public boolean canConnectWallTo(IBlockAccess p_150091_1_, int p_150091_2_, int p_150091_3_, int p_150091_4_) {
+		Block block = p_150091_1_.getBlock(p_150091_2_, p_150091_3_, p_150091_4_);
+		return block instanceof BlockFenceGate || block instanceof BaseWall || super.canConnectWallTo(p_150091_1_, p_150091_2_, p_150091_3_, p_150091_4_);
 	}
 
 	@Override
@@ -71,18 +101,81 @@ public class BaseWall extends BlockWall implements ISubBlocksBlock {
 		return true;
 	}
 
-	@Override
-	public IIcon[] getIcons() {
-		return new IIcon[0];
+
+	public BaseWall setUnlocalizedNameWithPrefix(String name) {
+		setBlockName((getNameDomain().isEmpty() ? "" : getNameDomain() + ".") + name);
+		return this;
 	}
 
 	@Override
-	public String[] getTypes() {
-		return names;
+	public Block setBlockTextureName(String name) {
+		return super.setBlockTextureName((getTextureDomain().isEmpty() ? "" : getTextureDomain() + ":")
+				+ (getTextureSubfolder().isEmpty() ? "" : getTextureSubfolder() + "/") + name);
+	}
+
+	public BaseWall setNames(String name) {
+		setUnlocalizedNameWithPrefix(name);
+		setBlockTextureName(name);
+		return this;
+	}
+
+	public BaseWall setToolClass(String toolClass, int level) {
+		setHarvestLevel(toolClass, level);
+		return this;
+	}
+
+	public BaseWall setToolClass(String toolClass, int level, int meta) {
+		setHarvestLevel(toolClass, level, meta);
+		return this;
+	}
+
+	public BaseWall setBlockSound(SoundType type) {
+		Utils.setBlockSound(this, type);
+		return this;
+	}
+
+	public BaseWall setMapColorBaseBlock(Block block) {
+		mapColorBase = block;
+		return this;
 	}
 
 	@Override
-	public String getNameFor(ItemStack stack) {
-		return "tile." + getNameDomain() + "." + names[stack.getItemDamage() % variations];
+	public MapColor getMapColor(int meta) {
+		return mapColorBase == null ? super.getMapColor(meta) : mapColorBase.getMapColor(meta);
+	}
+
+	private final Map<Integer, Float> hardnesses = Maps.newHashMap();
+	private final Map<Integer, Float> resistances = Maps.newHashMap();
+
+	@Override
+	public float getBlockHardness(World worldIn, int x, int y, int z) {
+		return hardnesses.getOrDefault(worldIn.getBlockMetadata(x, y, z), super.getBlockHardness(worldIn, x, y, z));
+	}
+
+	public BaseWall setHardnesses(float hardness, int... metas) {
+		if (metas.length == 0) {
+			setHardness(hardness);
+		} else for (int meta : metas) {
+			hardnesses.put(meta, hardness);
+		}
+		return this;
+	}
+
+	@Override
+	public float getExplosionResistance(Entity par1Entity, World world, int x, int y, int z, double explosionX, double explosionY, double explosionZ) {
+		Float resistance = resistances.get(world.getBlockMetadata(x, y, z));
+		if (resistance != null) {
+			return resistance / 5.0F;
+		}
+		return super.getExplosionResistance(par1Entity, world, x, y, z, explosionX, explosionY, explosionZ);
+	}
+
+	public BaseWall setResistances(float resistance, int... metas) {
+		if (metas.length == 0) {
+			setResistance(resistance);
+		} else for (int meta : metas) {
+			resistances.put(meta, resistance);
+		}
+		return this;
 	}
 }

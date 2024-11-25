@@ -27,7 +27,6 @@ import java.util.List;
 
 public class ItemArmorElytra extends BaseItem implements IBaubleExpanded {
 
-	@SideOnly(Side.CLIENT)
 	private IIcon broken;
 
 	public ItemArmorElytra() {
@@ -76,7 +75,6 @@ public class ItemArmorElytra extends BaseItem implements IBaubleExpanded {
 	}
 
 	@Override
-	@SideOnly(Side.CLIENT)
 	public IIcon getIconFromDamage(int meta) {
 		return meta >= getMaxDamage() ? broken : super.getIconFromDamage(meta);
 	}
@@ -101,9 +99,8 @@ public class ItemArmorElytra extends BaseItem implements IBaubleExpanded {
 		return null;
 	}
 
-	@SideOnly(Side.CLIENT)
 	@Override
-	public void addInformation(ItemStack stack, EntityPlayer player, List tooltip, boolean debug) {
+	public void addInformation(ItemStack stack, EntityPlayer player, List<String> tooltip, boolean debug) {
 		if (Utils.badBetterFPSAlgorithm()) {
 			tooltip.add(I18n.format("efr.elytra.betterfps.warn1"));
 			tooltip.add(I18n.format("efr.elytra.betterfps.warn2"));
@@ -111,14 +108,14 @@ public class ItemArmorElytra extends BaseItem implements IBaubleExpanded {
 		} else if (ModsList.BAUBLES_EXPANDED.isLoaded()) {
 			String[] slots;
 			switch (ConfigModCompat.elytraBaublesExpandedCompat) {
-				default:
-					slots = new String[]{"chestplate"};
-					break;
 				case 1:
 					slots = new String[]{"chestplate", "wings"};
 					break;
 				case 2:
 					slots = new String[]{"wings"};
+					break;
+				default:
+					slots = new String[]{"chestplate"};
 					break;
 			}
 			BaubleItemHelper.addSlotInformation(tooltip, slots);

@@ -1,7 +1,9 @@
 package ganymedes01.etfuturum.world;
 
+import com.google.common.collect.Maps;
 import cpw.mods.fml.common.registry.GameRegistry;
 import ganymedes01.etfuturum.ModBlocks;
+import ganymedes01.etfuturum.blocks.BlockBubbleColumn;
 import ganymedes01.etfuturum.compat.ModsList;
 import ganymedes01.etfuturum.configuration.configs.ConfigMixins;
 import ganymedes01.etfuturum.configuration.configs.ConfigWorld;
@@ -17,14 +19,15 @@ import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.EnumFacing;
 import net.minecraft.world.IWorldAccess;
 import net.minecraft.world.World;
+import net.minecraftforge.common.util.ForgeDirection;
 
-import java.util.HashMap;
 import java.util.Map;
 
 public class EtFuturumWorldListener implements IWorldAccess {
 
 	private final World world;
-	private static final Map<Block, Block> replacements = new HashMap<>();
+	private static final Map<Block, Block> replacements = Maps.newHashMap();
+	public static final Map<Block, Block> bubbleColumnMap = Maps.newHashMap();
 
 	public EtFuturumWorldListener(World theWorld) {
 		world = theWorld;
@@ -92,6 +95,9 @@ public class EtFuturumWorldListener implements IWorldAccess {
 			return;
 
 		handleBasaltFromLava(x, y, z);
+		for (ForgeDirection dir : Utils.FORGE_DIRECTIONS) {
+			handleBubbleColumnCreation(x + dir.offsetX, y + dir.offsetY, z + dir.offsetZ);
+		}
 
 		Block replacement;
 		TileEntity tile;
@@ -103,8 +109,7 @@ public class EtFuturumWorldListener implements IWorldAccess {
 		NBTTagCompound nbt = new NBTTagCompound();
 		if (tile != null) {
 			tile.writeToNBT(nbt);
-			if (tile instanceof IInventory) {
-				IInventory invt = (IInventory) tile;
+			if (tile instanceof IInventory invt) {
 				for (int j = 0; j < invt.getSizeInventory(); j++) {
 					invt.setInventorySlotContents(j, null);
 				}
@@ -143,6 +148,21 @@ public class EtFuturumWorldListener implements IWorldAccess {
 		}
 	}
 
+	/**
+	 * This is only needed to create the initial bubble column above the magma or soul sand or custom column above another block.
+	 * The column itself handles the creation of the remainder of the column, as well as destroying itself.
+	 */
+	private void handleBubbleColumnCreation(int x, int y, int z) {
+		if (!bubbleColumnMap.isEmpty() && world.blockExists(x, y, z)) {
+			if (BlockBubbleColumn.isFullVanillaWater(world.getBlock(x, y + 1, z), world.getBlockMetadata(x, y + 1, z))) {
+				Block block = bubbleColumnMap.get(world.getBlock(x, y, z));
+				if (block != null) {
+					world.setBlock(x, y + 1, z, block, 0, 3);
+				}
+			}
+		}
+	}
+
 	@Override
 	public void markBlockForRenderUpdate(int p_147588_1_, int p_147588_2_, int p_147588_3_) {
 		// TODO Auto-generated method stub
@@ -157,8 +177,8 @@ public class EtFuturumWorldListener implements IWorldAccess {
 	}
 
 	@Override
-	public void playSound(String p_72704_1_, double p_72704_2_, double p_72704_4_, double p_72704_6_, float p_72704_8_,
-						  float p_72704_9_) {
+	public void playSound(String soundName, double x, double y, double z, float volume,
+						  float pitch) {
 		// TODO Auto-generated method stub
 
 	}

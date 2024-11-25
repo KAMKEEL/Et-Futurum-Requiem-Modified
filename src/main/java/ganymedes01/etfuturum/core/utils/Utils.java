@@ -1,20 +1,22 @@
 package ganymedes01.etfuturum.core.utils;
 
 import cpw.mods.fml.common.Loader;
-import cpw.mods.fml.relauncher.ReflectionHelper;
 import ganymedes01.etfuturum.client.sound.ModSounds;
 import ganymedes01.etfuturum.compat.ModsList;
 import ganymedes01.etfuturum.configuration.configs.ConfigBlocksItems;
 import ganymedes01.etfuturum.configuration.configs.ConfigModCompat;
 import ganymedes01.etfuturum.configuration.configs.ConfigSounds;
 import ganymedes01.etfuturum.lib.Reference;
+import ganymedes01.etfuturum.spectator.SpectatorMode;
 import net.minecraft.block.Block;
 import net.minecraft.entity.Entity;
+import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.init.Items;
 import net.minecraft.item.ItemBlock;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.nbt.NBTTagList;
+import net.minecraft.potion.PotionEffect;
 import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.*;
 import net.minecraft.world.IBlockAccess;
@@ -27,6 +29,7 @@ import org.apache.commons.lang3.ArrayUtils;
 
 import java.util.*;
 import java.util.function.Predicate;
+import java.util.stream.Collectors;
 
 public class Utils {
 
@@ -127,7 +130,7 @@ public class Utils {
 		World world = p_188802_0_.worldObj;
 		Vec3 vec3d = Vec3.createVectorHelper(d0, d1, d2);
 		Vec3 vec3d1 = Vec3.createVectorHelper(d0 + d3, d1 + d4, d2 + d5);
-		MovingObjectPosition raytraceresult = world.func_147447_a(vec3d, vec3d1, false, true, false);
+		MovingObjectPosition raytraceresult = world.func_147447_a/*rayTraceBlocks*/(vec3d, vec3d1, false, true, false);
 
 		if (p_188802_1_) {
 			if (raytraceresult != null) {
@@ -240,7 +243,7 @@ public class Utils {
 			p_181159_0_ = d1;
 		}
 
-		double d9 = fastInvSqrt(d0);
+		double d9 = invSqrt(d0);
 		p_181159_2_ = p_181159_2_ * d9;
 		p_181159_0_ = p_181159_0_ * d9;
 		double d2 = FRAC_BIAS + p_181159_0_;
@@ -267,13 +270,12 @@ public class Utils {
 		return d8;
 	}
 
-	public static double fastInvSqrt(double p_181161_0_) {
-		double d0 = 0.5D * p_181161_0_;
-		long i = Double.doubleToRawLongBits(p_181161_0_);
-		i = 6910469410427058090L - (i >> 1);
-		p_181161_0_ = Double.longBitsToDouble(i);
-		p_181161_0_ = p_181161_0_ * (1.5D - d0 * p_181161_0_ * p_181161_0_);
-		return p_181161_0_;
+	public static float invSqrt(float num) {
+		return 1 / (float) Math.sqrt(num);
+	}
+
+	public static double invSqrt(double num) {
+		return 1 / Math.sqrt(num);
 	}
 
 	public static double perlinFade(double value) {
@@ -345,33 +347,28 @@ public class Utils {
 		return value < (double) l ? l - 1L : l;
 	}
 
-	public static float fastInverseSqrt(float x) {
-		float f = 0.5F * x;
-		int i = Float.floatToIntBits(x);
-		i = 1597463007 - (i >> 1);
-		x = Float.intBitsToFloat(i);
-		x *= 1.5F - f * x * x;
-		return x;
-	}
-
-	public static double fastInverseSqrt(double x) {
-		double d = 0.5D * x;
-		long l = Double.doubleToRawLongBits(x);
-		l = 6910469410427058090L - (l >> 1);
-		x = Double.longBitsToDouble(l);
-		x *= 1.5D - d * x * x;
-		return x;
-	}
-
 	public static <T> T getRandom(List<T> list, Random rand) {
 		return list.get(rand.nextInt(list.size()));
 	}
 
+	public static <T> T getRandom(T[] array, Random rand) {
+		return array[rand.nextInt(array.length)];
+	}
+
+	//TODO Do the other primitives for this
+	public static int getRandom(int[] array, Random rand) {
+		return array[rand.nextInt(array.length)];
+	}
+
 	public static void setBlockSound(Block block, Block.SoundType type) {
+		block.setStepSound(getSound(type));
+	}
+
+	public static Block.SoundType getSound(Block.SoundType type) {
 		if (type instanceof ModSounds.CustomSound) {
-			block.setStepSound(ConfigSounds.newBlockSounds ? type : ((ModSounds.CustomSound) type).getDisabledSound());
+			return ConfigSounds.newBlockSounds ? type : ((ModSounds.CustomSound) type).getDisabledSound();
 		}
-		block.setStepSound(type);
+		return type;
 	}
 
 	/**
@@ -462,15 +459,8 @@ public class Utils {
 		if (maxMeta == null) {
 			if (ModsList.NOT_ENOUGH_IDS.isLoaded() && ModsList.NOT_ENOUGH_IDS.isVersionNewerOrEqual("2.0.0")) {
 				maxMeta = (int) Short.MAX_VALUE;
-			} else if (ModsList.ENDLESS_IDS.isLoaded() && ModsList.ENDLESS_IDS.isVersionNewerOrEqual("1.5-alpha0001")) {
-				try {
-					if (ReflectionHelper.findField(Class.forName("com.falsepattern.endlessids.config.GeneralConfig"), "extendBlockItem").getBoolean(null)) {
-						maxMeta = 65536;
-					}
-				} catch (Exception e) {
-					maxMeta = 15;
-					throw new RuntimeException(e.getMessage());
-				}
+			} else if (ModsList.ENDLESS_IDS_BLOCKITEM.isLoaded()) {
+				maxMeta = 65536;
 			} else {
 				maxMeta = 15;
 			}
@@ -511,7 +501,7 @@ public class Utils {
 
 	//STUPIDLY POINTLESSLY CLIENTSIDED FUNCTION STRIKES AGAIN AAAGH
 	public static boolean hasPotionEffect(ItemStack p_hasEffect_1_) {
-		List var2 = Items.potionitem.getEffects(p_hasEffect_1_);
+		List<PotionEffect> var2 = Items.potionitem.getEffects(p_hasEffect_1_);
 		return var2 != null && !var2.isEmpty();
 	}
 
@@ -589,5 +579,15 @@ public class Utils {
 	public static boolean listGeneralModdedRawOre(String oreDict) {
 		return !ConfigModCompat.moddedRawOresBlacklist.contains(oreDict.replace("ingot", "ore"))
 				&& !OreDictionary.getOres(oreDict).isEmpty() && !OreDictionary.getOres(oreDict.replace("ingot", "ore")).isEmpty();
+	}
+
+	/**
+	 * Filters spectators out of the provided list.
+	 *
+	 * @param list
+	 * @return
+	 */
+	public static List<EntityPlayer> getListWithoutSpectators(List<EntityPlayer> list) {
+		return list.stream().filter(entity -> !SpectatorMode.isSpectator(entity)).collect(Collectors.toList());
 	}
 }

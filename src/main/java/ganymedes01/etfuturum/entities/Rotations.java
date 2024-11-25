@@ -16,9 +16,9 @@ public class Rotations {
 	}
 
 	public Rotations(NBTTagList nbt) {
-		x = nbt.func_150308_e(0);
-		y = nbt.func_150308_e(1);
-		z = nbt.func_150308_e(2);
+		x = nbt.func_150308_e(0); // getFloatAt
+		y = nbt.func_150308_e(1); // getFloatAt
+		z = nbt.func_150308_e(2); // getFloatAt
 	}
 
 	public NBTTagList writeToNBT() {
@@ -31,9 +31,8 @@ public class Rotations {
 
 	@Override
 	public boolean equals(Object p_equals_1_) {
-		if (!(p_equals_1_ instanceof Rotations))
+		if (!(p_equals_1_ instanceof Rotations rotations))
 			return false;
-		Rotations rotations = (Rotations) p_equals_1_;
 		return x == rotations.x && y == rotations.y && z == rotations.z;
 	}
 

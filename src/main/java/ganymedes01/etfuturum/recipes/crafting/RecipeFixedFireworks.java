@@ -12,6 +12,7 @@ import net.minecraft.world.World;
 import java.util.ArrayList;
 
 public class RecipeFixedFireworks extends RecipeFireworks {
+	@Override
 	public boolean matches(InventoryCrafting p_77569_1_, World p_77569_2_) {
 		this.field_92102_a = null;
 		int i = 0;
@@ -87,7 +88,7 @@ public class RecipeFixedFireworks extends RecipeFireworks {
 				nbttagcompound = new NBTTagCompound();
 				nbttagcompound1 = new NBTTagCompound();
 				byte b0 = 0;
-				ArrayList arraylist = new ArrayList();
+				ArrayList<Integer> arraylist = new ArrayList<>();
 
 				for (int l1 = 0; l1 < p_77569_1_.getSizeInventory(); ++l1) {
 					ItemStack itemstack2 = p_77569_1_.getStackInSlot(l1);
@@ -114,7 +115,7 @@ public class RecipeFixedFireworks extends RecipeFireworks {
 				int[] aint1 = new int[arraylist.size()];
 
 				for (int l2 = 0; l2 < aint1.length; ++l2) {
-					aint1[l2] = ((Integer) arraylist.get(l2)).intValue();
+					aint1[l2] = arraylist.get(l2).intValue();
 				}
 
 				nbttagcompound1.setIntArray("Colors", aint1);
@@ -123,7 +124,7 @@ public class RecipeFixedFireworks extends RecipeFireworks {
 				this.field_92102_a.setTagCompound(nbttagcompound);
 				return true;
 			} else if (j == 0 && i == 0 && l == 1 && k > 0 && k == i1) {
-				ArrayList arraylist1 = new ArrayList();
+				ArrayList<Integer> arraylist1 = new ArrayList<>();
 
 				for (int i2 = 0; i2 < p_77569_1_.getSizeInventory(); ++i2) {
 					ItemStack itemstack1 = p_77569_1_.getStackInSlot(i2);
@@ -141,7 +142,7 @@ public class RecipeFixedFireworks extends RecipeFireworks {
 				int[] aint = new int[arraylist1.size()];
 
 				for (int j2 = 0; j2 < aint.length; ++j2) {
-					aint[j2] = ((Integer) arraylist1.get(j2)).intValue();
+					aint[j2] = arraylist1.get(j2).intValue();
 				}
 
 				if (this.field_92102_a != null && this.field_92102_a.hasTagCompound()) {

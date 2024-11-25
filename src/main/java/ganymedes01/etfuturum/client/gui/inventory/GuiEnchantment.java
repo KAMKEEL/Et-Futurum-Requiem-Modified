@@ -1,8 +1,6 @@
 package ganymedes01.etfuturum.client.gui.inventory;
 
 import com.google.common.collect.Lists;
-import cpw.mods.fml.relauncher.Side;
-import cpw.mods.fml.relauncher.SideOnly;
 import ganymedes01.etfuturum.api.EnchantingFuelRegistry;
 import ganymedes01.etfuturum.client.OpenGLHelper;
 import ganymedes01.etfuturum.core.utils.Utils;
@@ -25,24 +23,38 @@ import org.lwjgl.util.glu.Project;
 import java.util.ArrayList;
 import java.util.Random;
 
-@SideOnly(Side.CLIENT)
 public class GuiEnchantment extends GuiContainer {
 
-	private static final ResourceLocation field_147078_C = Utils.getResource(Reference.MOD_ID + ":textures/gui/container/enchanting_table.png");
-	private static final ResourceLocation field_147070_D = Utils.getResource("textures/entity/enchanting_table_book.png");
-	private static final ModelBook field_147072_E = new ModelBook();
-	private final InventoryPlayer field_175379_F;
-	private final Random field_147074_F = new Random();
-	private final ContainerEnchantment field_147075_G;
-	public int field_147073_u;
-	public float field_147071_v;
-	public float field_147069_w;
-	public float field_147082_x;
-	public float field_147081_y;
-	public float field_147080_z;
-	public float field_147076_A;
-	ItemStack field_147077_B;
-	private final String field_175380_I;
+	private final ResourceLocation TEXTURE;
+	/**
+	 * The ResourceLocation containing the texture for the Book rendered above the enchantment table
+	 */
+	private static final ResourceLocation ENCHANTMENT_TABLE_BOOK_TEXTURE = Utils.getResource("textures/entity/enchanting_table_book.png");
+	/**
+	 * The ModelBook instance used for rendering the book on the Enchantment table
+	 */
+	private static final ModelBook MODEL_BOOK = new ModelBook();
+	/**
+	 * The player inventory currently bound to this GuiEnchantment instance.
+	 */
+	private final InventoryPlayer playerInventory;
+	/**
+	 * A Random instance for use with the enchantment gui
+	 */
+	private final Random random = new Random();
+	/**
+	 * The same reference as {@link GuiContainer#inventorySlots}, downcasted to {@link ContainerEnchantment}.
+	 */
+	private final ContainerEnchantment container;
+	public int ticks;
+	public float flip;
+	public float oFlip;
+	public float flipT;
+	public float flipA;
+	public float open;
+	public float oOpen;
+	ItemStack last;
+	private final String nameable;
 
 	/**
 	 * How long has the player seen the "lapis lazuli" text?
@@ -55,12 +67,16 @@ public class GuiEnchantment extends GuiContainer {
 
 	public GuiEnchantment(InventoryPlayer p_i45502_1_, World worldIn, String p_i45502_3_) {
 		super(new ContainerEnchantment(p_i45502_1_, worldIn, 0, 0, 0));
-		field_175379_F = p_i45502_1_;
-		field_147075_G = (ContainerEnchantment) inventorySlots;
-		field_175380_I = p_i45502_3_;
+		playerInventory = p_i45502_1_;
+		container = (ContainerEnchantment) inventorySlots;
+		nameable = p_i45502_3_;
+
+		TEXTURE = Utils.getResource(
+				container.noFuel ? "textures/gui/container/enchanting_table.png" :
+						Reference.MOD_ID + ":textures/gui/container/enchanting_table.png");
 
 		displayStacks = new ArrayList<>(EnchantingFuelRegistry.getFuels().keySet());
-		if (!displayStacks.isEmpty()) {
+		if (displayStacks.size() > 1) {
 			for (int i = 1; i < displayStacks.size(); i++) {
 				ItemStack stack = displayStacks.get(i);
 				if (LAPIS.isItemEqual(stack)) {
@@ -69,8 +85,8 @@ public class GuiEnchantment extends GuiContainer {
 					break;
 				}
 			}
-			displayItem = displayStacks.get(0);
 		}
+		displayItem = container.noFuel ? LAPIS : displayStacks.get(0);
 	}
 
 	/**
@@ -78,8 +94,8 @@ public class GuiEnchantment extends GuiContainer {
 	 */
 	@Override
 	protected void drawGuiContainerForegroundLayer(int mouseX, int mouseY) {
-		fontRendererObj.drawString(field_175380_I == null ? I18n.format("container.enchant") : field_175380_I, 12, 5, 4210752);
-		fontRendererObj.drawString(I18n.format(field_175379_F.getInventoryName()), 8, ySize - 96 + 2, 4210752);
+		fontRendererObj.drawString(nameable == null ? I18n.format("container.enchant") : nameable, 12, 5, 4210752);
+		fontRendererObj.drawString(I18n.format(playerInventory.getInventoryName()), 8, ySize - 96 + 2, 4210752);
 	}
 
 	/**
@@ -107,8 +123,8 @@ public class GuiEnchantment extends GuiContainer {
 			int var7 = mouseX - (var4 + 60);
 			int var8 = mouseY - (var5 + 14 + 19 * var6);
 
-			if (var7 >= 0 && var8 >= 0 && var7 < 108 && var8 < 19 && field_147075_G.enchantItem(mc.thePlayer, var6))
-				mc.playerController.sendEnchantPacket(field_147075_G.windowId, var6);
+			if (var7 >= 0 && var8 >= 0 && var7 < 108 && var8 < 19 && container.enchantItem(mc.thePlayer, var6))
+				mc.playerController.sendEnchantPacket(container.windowId, var6);
 		}
 	}
 
@@ -118,7 +134,7 @@ public class GuiEnchantment extends GuiContainer {
 	@Override
 	protected void drawGuiContainerBackgroundLayer(float partialTicks, int mouseX, int mouseY) {
 		OpenGLHelper.colour(1, 1, 1);
-		mc.getTextureManager().bindTexture(field_147078_C);
+		mc.getTextureManager().bindTexture(TEXTURE);
 		int k = (width - xSize) / 2;
 		int l = (height - ySize) / 2;
 		drawTexturedModalRect(k, l, 0, 0, xSize, ySize);
@@ -139,14 +155,14 @@ public class GuiEnchantment extends GuiContainer {
 		float var8 = 5.0F;
 		OpenGLHelper.scale(var8, var8, var8);
 		OpenGLHelper.rotate(180.0F, 0.0F, 0.0F, 1.0F);
-		mc.getTextureManager().bindTexture(field_147070_D);
+		mc.getTextureManager().bindTexture(ENCHANTMENT_TABLE_BOOK_TEXTURE);
 		OpenGLHelper.rotate(20.0F, 1.0F, 0.0F, 0.0F);
-		float var9 = field_147076_A + (field_147080_z - field_147076_A) * partialTicks;
+		float var9 = oOpen + (open - oOpen) * partialTicks;
 		OpenGLHelper.translate((1.0F - var9) * 0.2F, (1.0F - var9) * 0.1F, (1.0F - var9) * 0.25F);
 		OpenGLHelper.rotate(-(1.0F - var9) * 90.0F - 90.0F, 0.0F, 1.0F, 0.0F);
 		OpenGLHelper.rotate(180.0F, 1.0F, 0.0F, 0.0F);
-		float var10 = field_147069_w + (field_147071_v - field_147069_w) * partialTicks + 0.25F;
-		float var11 = field_147069_w + (field_147071_v - field_147069_w) * partialTicks + 0.75F;
+		float var10 = oFlip + (flip - oFlip) * partialTicks + 0.25F;
+		float var11 = oFlip + (flip - oFlip) * partialTicks + 0.75F;
 		var10 = (var10 - MathHelper.truncateDoubleToInt(var10)) * 1.6F - 0.3F;
 		var11 = (var11 - MathHelper.truncateDoubleToInt(var11)) * 1.6F - 0.3F;
 
@@ -163,7 +179,7 @@ public class GuiEnchantment extends GuiContainer {
 			var11 = 1.0F;
 
 		OpenGLHelper.enableRescaleNormal();
-		field_147072_E.render(null, 0.0F, var10, var11, var9, 0.0F, 0.0625F);
+		MODEL_BOOK.render(null, 0.0F, var10, var11, var9, 0.0F, 0.0625F);
 		OpenGLHelper.disableRescaleNormal();
 		RenderHelper.disableStandardItemLighting();
 		OpenGLHelper.matrixMode(5889);
@@ -173,8 +189,8 @@ public class GuiEnchantment extends GuiContainer {
 		OpenGLHelper.popMatrix();
 		RenderHelper.disableStandardItemLighting();
 		OpenGLHelper.colour(1.0F, 1.0F, 1.0F);
-		EnchantmentNameParts.instance.reseedRandomGenerator(field_147075_G.enchantmentSeed);
-		int var12 = field_147075_G.func_178147_e();
+		EnchantmentNameParts.instance.reseedRandomGenerator(container.enchantmentSeed);
+		int var12 = container.getLapisAmount();
 
 		for (int i1 = 0; i1 < 3; i1++) {
 			int var14 = k + 60;
@@ -182,8 +198,8 @@ public class GuiEnchantment extends GuiContainer {
 			byte var16 = 86;
 			String s = EnchantmentNameParts.instance.generateNewRandomName();
 			zLevel = 0.0F;
-			mc.getTextureManager().bindTexture(field_147078_C);
-			int j1 = field_147075_G.enchantLevels[i1];
+			mc.getTextureManager().bindTexture(TEXTURE);
+			int j1 = container.enchantLevels[i1];
 			OpenGLHelper.colour(1.0F, 1.0F, 1.0F);
 
 			if (j1 == 0)
@@ -227,32 +243,31 @@ public class GuiEnchantment extends GuiContainer {
 	public void drawScreen(int mouseX, int mouseY, float partialTicks) {
 		super.drawScreen(mouseX, mouseY, partialTicks);
 		boolean var4 = mc.thePlayer.capabilities.isCreativeMode;
-		int var5 = field_147075_G.func_178147_e();
+		int var5 = container.getLapisAmount();
 
 		for (int var6 = 0; var6 < 3; ++var6) {
-			int var7 = field_147075_G.enchantLevels[var6];
-			int var8 = field_147075_G.field_178151_h[var6];
+			int var7 = container.enchantLevels[var6];
+			int var8 = container.enchantmentIds[var6];
 			int var9 = var6 + 1;
 
-			if (func_146978_c(60, 14 + 19 * var6, 108, 17, mouseX, mouseY) && var7 > 0 && var8 >= 0) {
-				ArrayList<Object> var10 = Lists.newArrayList();
+			if (func_146978_c/*isPointInRegion*/(60, 14 + 19 * var6, 108, 17, mouseX, mouseY) && var7 > 0 && var8 >= 0) {
+				ArrayList<String> var10 = Lists.newArrayList();
 				String var11;
-				if (Enchantment.enchantmentsList[var8 & 255] != null) {
-					var11 = Enchantment.enchantmentsList[var8 & 255].getTranslatedName((var8 & 65280) >> 8);
+				Enchantment ench = Enchantment.enchantmentsList[var8 % Enchantment.enchantmentsList.length];
+				if (ench != null) {
+					var11 = ench.getTranslatedName((var8) >> 8);
 					var10.add(EnumChatFormatting.WHITE.toString() + EnumChatFormatting.ITALIC + I18n.format("container.enchant.clue", var11));
 				}
 
 				if (!var4) {
-					var10.add("");
+					if (ench != null) {
+						var10.add("");
+					}
 
 					if (mc.thePlayer.experienceLevel < var7)
-						var10.add(EnumChatFormatting.RED + I18n.format("container.enchant.level.required") + ": " + field_147075_G.enchantLevels[var6]);
+						var10.add(EnumChatFormatting.RED + I18n.format("container.enchant.level.required") + ": " + container.enchantLevels[var6]);
 					else {
-						var11 = "";
-
-						if (EnchantingFuelRegistry.getFuels().isEmpty()) {
-							var11 = StatCollector.translateToLocal("container.enchant.rusrs");
-						} else {
+						if (displayStacks.size() > 1) {
 							if (viewingTicks > 40) {
 								viewingTicks = 0;
 								ArrayList<ItemStack> tempList = new ArrayList<>(displayStacks);
@@ -260,30 +275,23 @@ public class GuiEnchantment extends GuiContainer {
 								displayItem = tempList.get(displayRand.nextInt(tempList.size()));
 								//We don't want to display the same item name twice in a row (because then it looks like it's being displayed for a longer time)
 							}
+						}
+						if (!container.noFuel) {
+							String name;
 
-							String name = displayItem.getUnlocalizedName() + ".name";
-							String prefix = name.equals("container.enchant.lapis.one") ? "" : "%s ";
-							String text1 = prefix + StatCollector.translateToLocal(name);
-							String text2 = prefix + StatCollector.translateToLocal(name.equals("item.dyePowder.blue.name") ? "container.enchant.lapis.one" : name);
-
-							if (var9 == 1) {
-								var11 = String.format(text1, 1);
+							if (displayItem.isItemEqual(LAPIS)) {
+								name = StatCollector.translateToLocal("container.enchant.lapis." + (var9 > 1 ? "many" : "one"));
 							} else {
-								var11 = String.format(text2, var9);
+								name = "%s " + StatCollector.translateToLocal(displayItem.getUnlocalizedName() + ".name");
 							}
+
+							var11 = String.format(name, var9);
+							var10.add((var5 >= var9 ? EnumChatFormatting.GRAY : EnumChatFormatting.RED) + var11);
 						}
 
-						if (var5 >= var9)
-							var10.add(EnumChatFormatting.GRAY + "" + var11);
-						else
-							var10.add(EnumChatFormatting.RED + "" + var11);
+						var11 = I18n.format(var9 == 1 ? "container.enchant.level.one" : "container.enchant.level.many", var9);
 
-						if (var9 == 1)
-							var11 = I18n.format("container.enchant.level.one");
-						else
-							var11 = I18n.format("container.enchant.level.many", var9);
-
-						var10.add(EnumChatFormatting.GRAY + "" + var11);
+						var10.add(EnumChatFormatting.GRAY + var11);
 					}
 				}
 
@@ -296,35 +304,35 @@ public class GuiEnchantment extends GuiContainer {
 	public void func_147068_g() {
 		ItemStack var1 = inventorySlots.getSlot(0).getStack();
 
-		if (!ItemStack.areItemStacksEqual(var1, field_147077_B)) {
-			field_147077_B = var1;
+		if (!ItemStack.areItemStacksEqual(var1, last)) {
+			last = var1;
 
 			do
-				field_147082_x += field_147074_F.nextInt(4) - field_147074_F.nextInt(4);
-			while (field_147071_v <= field_147082_x + 1.0F && field_147071_v >= field_147082_x - 1.0F);
+				flipT += random.nextInt(4) - random.nextInt(4);
+			while (flip <= flipT + 1.0F && flip >= flipT - 1.0F);
 		}
 
-		++field_147073_u;
-		field_147069_w = field_147071_v;
-		field_147076_A = field_147080_z;
+		++ticks;
+		oFlip = flip;
+		oOpen = open;
 		boolean var2 = false;
 
 		for (int var3 = 0; var3 < 3; ++var3)
-			if (field_147075_G.enchantLevels[var3] != 0) {
+			if (container.enchantLevels[var3] != 0) {
 				var2 = true;
 				break;
 			}
 
 		if (var2)
-			field_147080_z += 0.2F;
+			open += 0.2F;
 		else
-			field_147080_z -= 0.2F;
+			open -= 0.2F;
 
-		field_147080_z = MathHelper.clamp_float(field_147080_z, 0.0F, 1.0F);
-		float var5 = (field_147082_x - field_147071_v) * 0.4F;
+		open = MathHelper.clamp_float(open, 0.0F, 1.0F);
+		float var5 = (flipT - flip) * 0.4F;
 		float var4 = 0.2F;
 		var5 = MathHelper.clamp_float(var5, -var4, var4);
-		field_147081_y += (var5 - field_147081_y) * 0.9F;
-		field_147071_v += field_147081_y;
+		flipA += (var5 - flipA) * 0.9F;
+		flip += flipA;
 	}
 }

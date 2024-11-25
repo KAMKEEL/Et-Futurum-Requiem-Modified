@@ -113,7 +113,7 @@ public class EtFuturumLateWorldGenerator extends EtFuturumWorldGenerator {
 				for (int y = 0; y < chunk.getHeightValue(x, z); y++) {
 					ExtendedBlockStorage array = chunk.getBlockStorageArray()[y >> 4];
 					if (array != null && array.getExtBlockMetadata(x, y & 15, z) == 1 && array.getBlockByExtId(x, y & 15, z) == Blocks.dirt) {
-						array.func_150818_a(x, y & 15, z, ModBlocks.COARSE_DIRT.get());
+						array.func_150818_a/*setExtBlockID*/(x, y & 15, z, ModBlocks.COARSE_DIRT.get());
 						array.setExtBlockMetadata(x, y & 15, z, 0);
 					}
 				}
@@ -129,11 +129,13 @@ public class EtFuturumLateWorldGenerator extends EtFuturumWorldGenerator {
 		final int chunkMultiplierX = chunk.xPosition << 4;
 		final int chunkMultiplierZ = chunk.zPosition << 4;
 
-		for (int y = 0; y <= Math.min(ConfigWorld.deepslateMaxY, chunk.worldObj.getHeight()); y++) {
+		boolean shouldDimBeJustDeepslate = ArrayUtils.contains(ConfigWorld.replaceAllStoneWithDeepslateDimensionWhitelist, chunk.worldObj.provider.dimensionId);
+		int replaceUnderY = (shouldDimBeJustDeepslate ? chunk.worldObj.getActualHeight() : ConfigWorld.deepslateMaxY);
+		for (int y = 0; y <= Math.min(replaceUnderY, chunk.worldObj.getHeight()); y++) {
 			ExtendedBlockStorage array = chunk.getBlockStorageArray()[y >> 4];
 			for (int x = 0; x < 16; x++) {
 				for (int z = 0; z < 16; z++) {
-					if (ConfigWorld.deepslateMaxY >= 255 || y < ConfigWorld.deepslateMaxY - 4 || y <= ConfigWorld.deepslateMaxY - chunk.worldObj.rand.nextInt(4)) {
+					if (ConfigWorld.deepslateMaxY >= 255 || shouldDimBeJustDeepslate || y < ConfigWorld.deepslateMaxY - 4 || y <= ConfigWorld.deepslateMaxY - chunk.worldObj.rand.nextInt(4)) {
 						worldX = x + chunkMultiplierX;
 						worldZ = z + chunkMultiplierZ;
 
@@ -149,13 +151,13 @@ public class EtFuturumLateWorldGenerator extends EtFuturumWorldGenerator {
 	private void replaceBlockInChunk(World world, Block block, int x, int z, int worldX, int worldY, int worldZ, ExtendedBlockStorage array) {
 		if ((ConfigWorld.deepslateReplacesStones || block != ModBlocks.STONE.get()) && block.getMaterial() != Material.air && block != ModBlocks.TUFF.get()) {
 			if (block.isReplaceableOreGen(world, worldX, worldY, worldZ, Blocks.stone)) {
-				array.func_150818_a(x, worldY & 15, z, ModBlocks.DEEPSLATE.get());
+				array.func_150818_a/*setExtBlockID*/(x, worldY & 15, z, ModBlocks.DEEPSLATE.get());
 				array.setExtBlockMetadata(x, worldY & 15, z, 0);
 				return;
 			}
 			RegistryMapping<Block> mapping = DeepslateOreRegistry.getOre(block, array.getExtBlockMetadata(x, worldY & 15, z));
 			if (mapping != null) {
-				array.func_150818_a(x, worldY & 15, z, mapping.getObject());
+				array.func_150818_a/*setExtBlockID*/(x, worldY & 15, z, mapping.getObject());
 				array.setExtBlockMetadata(x, worldY & 15, z, mapping.getMeta());
 			}
 		}

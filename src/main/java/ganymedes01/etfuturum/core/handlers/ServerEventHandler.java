@@ -32,14 +32,15 @@ import ganymedes01.etfuturum.elytra.IElytraPlayer;
 import ganymedes01.etfuturum.entities.*;
 import ganymedes01.etfuturum.entities.ai.EntityAIOpenCustomDoor;
 import ganymedes01.etfuturum.gamerule.DoWeatherCycle;
+import ganymedes01.etfuturum.gamerule.PlayersSleepingPercentage;
 import ganymedes01.etfuturum.gamerule.RandomTickSpeed;
-import ganymedes01.etfuturum.inventory.ContainerEnchantment;
 import ganymedes01.etfuturum.items.ItemArrowTipped;
 import ganymedes01.etfuturum.lib.Reference;
 import ganymedes01.etfuturum.network.AttackYawMessage;
 import ganymedes01.etfuturum.network.BlackHeartParticlesMessage;
 import ganymedes01.etfuturum.recipes.ModRecipes;
 import ganymedes01.etfuturum.spectator.SpectatorMode;
+import ganymedes01.etfuturum.storage.EtFuturumPlayer;
 import ganymedes01.etfuturum.tileentities.TileEntityGateway;
 import ganymedes01.etfuturum.world.EtFuturumWorldListener;
 import ganymedes01.etfuturum.world.nether.biome.utils.NetherBiomeManager;
@@ -101,11 +102,17 @@ import net.minecraftforge.oredict.OreDictionary;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.mutable.MutableFloat;
 
-import java.io.*;
+import java.io.BufferedReader;
+import java.io.IOException;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 
+@SuppressWarnings("deprecation")
 public class ServerEventHandler {
 
 	public static final ServerEventHandler INSTANCE = new ServerEventHandler();
@@ -149,17 +156,28 @@ public class ServerEventHandler {
 			}
 		}
 
-		if (ConfigMixins.stepHeightFix && event.entity.stepHeight == .5F) {
-			event.entity.stepHeight = .6F;
+		if (ConfigMixins.stepHeightFix && entity.stepHeight == .5F) {
+			entity.stepHeight = .6F;
 		}
 
 		if (ConfigMixins.enableElytra && entity instanceof IElytraPlayer) {
 			((IElytraPlayer) entity).tickElytra();
 		}
 
+		if (EntitySquid.class.equals(entity.getClass())) {
+			EntitySquid sq = (EntitySquid) entity;
 
-		if (ConfigSounds.armorEquip && !event.entity.worldObj.isRemote && event.entity instanceof EntityPlayer && !(event.entity instanceof FakePlayer)) {
-			EntityPlayer player = (EntityPlayer) event.entity;
+			if (ConfigEntities.enableSquidInk && "Nelly".equals(sq.getCustomNameTag())) {
+				Vec3 a = sq.getLookVec().normalize();
+				sq.fallDistance = 0.0f;
+				sq.addVelocity(a.xCoord * 0.08, 0.08, a.zCoord * 0.08);
+				sq.motionY = 0.08;
+				sq.velocityChanged = true;
+			}
+		}
+
+
+		if (ConfigSounds.armorEquip && !entity.worldObj.isRemote && entity instanceof EntityPlayer player && !(entity instanceof FakePlayer)) {
 
 			if (!SpectatorMode.isSpectator(player)) {
 				if (!armorTracker.containsKey(player)) {
@@ -226,8 +244,7 @@ public class ServerEventHandler {
 	public void onAttackEntityEvent(AttackEntityEvent event) { //Fires when a player presses the attack button on an entity
 		if (!event.target.worldObj.isRemote) {
 			// --- Left-click an item frame --- //
-			if (ConfigSounds.paintingItemFramePlacing && event.target instanceof EntityItemFrame) {
-				EntityItemFrame itemframe = (EntityItemFrame) event.target;
+			if (ConfigSounds.paintingItemFramePlacing && event.target instanceof EntityItemFrame itemframe) {
 				if (itemframe.getDisplayedItem() != null) {
 					event.target.playSound(Reference.MCAssetVer + ":entity.item_frame.remove_item", 1.0F, 1.0F);
 				} else {
@@ -318,17 +335,15 @@ public class ServerEventHandler {
 			return;
 		}
 
-		if (event.source instanceof EntityDamageSourceIndirect) {
-			EntityDamageSourceIndirect dmgSrc = (EntityDamageSourceIndirect) event.source;
-			if (dmgSrc.getSourceOfDamage() instanceof EntityTippedArrow) {
-				EntityTippedArrow tippedArrow = (EntityTippedArrow) dmgSrc.getSourceOfDamage();
+		if (event.source instanceof EntityDamageSourceIndirect dmgSrc) {
+			if (dmgSrc.getSourceOfDamage() instanceof EntityTippedArrow tippedArrow) {
 				if (!tippedArrow.worldObj.isRemote && dmgSrc.getEntity() instanceof EntityLivingBase) {
 
-					List list = ((ItemArrowTipped) ModItems.TIPPED_ARROW.get()).getEffects(tippedArrow.getArrow());
-					Iterator iterator1 = list.iterator();
+					List<PotionEffect> list = ((ItemArrowTipped) ModItems.TIPPED_ARROW.get()).getEffects(tippedArrow.getArrow());
+					Iterator<PotionEffect> iterator1 = list.iterator();
 
 					while (iterator1.hasNext()) {
-						PotionEffect potioneffect = (PotionEffect) iterator1.next();
+						PotionEffect potioneffect = iterator1.next();
 						int i = potioneffect.getPotionID();
 
 						if (Potion.potionTypes[i].isInstant()) {
@@ -411,44 +426,24 @@ public class ServerEventHandler {
 
 	@SubscribeEvent
 	public void onPlayerLoadFromFileEvent(PlayerEvent.LoadFromFile event) {
-		if (!ConfigBlocksItems.enableEnchantingTable)
-			return;
-		try {
-			File file = event.getPlayerFile(Reference.MOD_ID);
-			if (!file.exists()) {
-				file.createNewFile();
-				return;
-			}
+		if (!ConfigBlocksItems.enableEnchantingTable) return;
+		Path file = event.getPlayerFile(Reference.MOD_ID).toPath();
 
-			BufferedReader br = new BufferedReader(new FileReader(file));
-			String line = br.readLine();
-			if (line != null) {
-				int seed = Integer.parseInt(line);
-				ContainerEnchantment.seeds.put(event.playerUUID, seed);
-			}
-			br.close();
-		} catch (Exception ignored) {
-		}
-	}
+		if (Files.exists(file)) {
+			EtFuturumPlayer storage = EtFuturumPlayer.get(event.entityPlayer);
 
-	@SubscribeEvent
-	public void onPlayerSaveFromFileEvent(PlayerEvent.SaveToFile event) {
-		if (!ConfigBlocksItems.enableEnchantingTable)
-			return;
-		try {
-			File file = event.getPlayerFile(Reference.MOD_ID);
-			if (!file.exists()) {
-				file.createNewFile();
-				return;
+			try {
+				try (BufferedReader reader = Files.newBufferedReader(file, StandardCharsets.UTF_8)) {
+					int seed = Integer.parseInt(reader.readLine());
+					storage.setEnchantmentSeed(seed);
+				} catch (NumberFormatException ignore) {
+					// NO-OP
+				} finally {
+					Files.delete(file);
+				}
+			} catch (IOException ignore) {
+				// NO-OP
 			}
-
-			Integer seed = ContainerEnchantment.seeds.get(event.playerUUID);
-			if (seed != null) {
-				BufferedWriter bw = new BufferedWriter(new FileWriter(file));
-				bw.write(seed.toString());
-				bw.close();
-			}
-		} catch (IOException e) {
 		}
 	}
 
@@ -645,7 +640,7 @@ public class ServerEventHandler {
 	@SubscribeEvent
 	public void onBoneMeal(BonemealEvent event) {
 		if (ConfigSounds.bonemealing && event.block instanceof IGrowable && !event.world.isRemote &&
-				((IGrowable) event.block).func_149851_a(event.world, event.x, event.y, event.z, false)) { //Last arg should always be false because it typically checks for isRemote
+				((IGrowable) event.block).func_149851_a/*canFertilize*/(event.world, event.x, event.y, event.z, false)) { //Last arg should always be false because it typically checks for isRemote
 			event.world.playSoundEffect(event.x + .5F, event.y + .5F, event.z + .5F, Reference.MCAssetVer + ":item.bone_meal.use", 1, 1);
 		}
 	}
@@ -733,8 +728,7 @@ public class ServerEventHandler {
 								if (flag) {
 									for (WorldServer worldserver : FMLCommonHandler.instance().getMinecraftServerInstance().worldServers) {
 										for (Object playerobj : worldserver.playerEntities) {
-											if (playerobj instanceof EntityPlayerMP) {
-												EntityPlayerMP playermp = (EntityPlayerMP) playerobj;
+											if (playerobj instanceof EntityPlayerMP playermp) {
 												playermp.playerNetServerHandler.sendPacket(new S29PacketSoundEffect(Reference.MCAssetVer + ":block.end_portal.spawn",
 														playermp.posX, playermp.lastTickPosY, playermp.posZ, 1F, 1F));
 											}
@@ -830,7 +824,7 @@ public class ServerEventHandler {
 								if (block.canPlaceBlockAt(world, xMutable, yMutable, zMutable)) {
 									// Here is where item would be consumed and block would be set
 									// Block is successfully placed
-									world.playSoundEffect(xMutable + 0.5, yMutable + 0.5, zMutable + 0.5, block.stepSound.func_150496_b(), (block.stepSound.getVolume() + 1.0F) / 2.0F, block.stepSound.getPitch() * 0.8F);
+									world.playSoundEffect(xMutable + 0.5, yMutable + 0.5, zMutable + 0.5, block.stepSound.func_150496_b()/*getPlaceSound*/, (block.stepSound.getVolume() + 1.0F) / 2.0F, block.stepSound.getPitch() * 0.8F);
 									return;
 								}
 							}
@@ -846,12 +840,12 @@ public class ServerEventHandler {
 							if (world.getBlock(x, y, z).canSustainPlant(world, x, y, z, ForgeDirection.UP, (IPlantable) heldStack.getItem()) && world.isAirBlock(x, y + 1, z)) {
 								// Mundane seeds
 								if (oldBlock instanceof BlockFarmland) {
-									world.playSoundEffect(x + 0.5, y + 1F, z + 0.5, ModSounds.soundCrops.func_150496_b(), ModSounds.soundCrops.getVolume(), ModSounds.soundCrops.getPitch());
+									world.playSoundEffect(x + 0.5, y + 1F, z + 0.5, ModSounds.soundCrops.func_150496_b()/*getPlaceSound*/, ModSounds.soundCrops.getVolume(), ModSounds.soundCrops.getPitch());
 									return;
 								}
 								// Nether wart
 								else if (oldBlock instanceof BlockSoulSand) {
-									world.playSoundEffect(x + 0.5, y + 1F, z + 0.5, ModSounds.soundCropWarts.func_150496_b(), ModSounds.soundCropWarts.getVolume(), ModSounds.soundCropWarts.getPitch());
+									world.playSoundEffect(x + 0.5, y + 1F, z + 0.5, ModSounds.soundCropWarts.func_150496_b()/*getPlaceSound*/, ModSounds.soundCropWarts.getVolume(), ModSounds.soundCropWarts.getPitch());
 									return;
 								}
 							}
@@ -987,7 +981,10 @@ public class ServerEventHandler {
 						//This is nested into the same function since they use similar checks
 						if (heldStack != null) {
 							Set<String> toolClasses = heldStack.getItem().getToolClasses(heldStack);
-							if (toolClasses != null) {
+							if (toolClasses != null
+									//TODO dirty solution, make this a list, maybe a HogUtils tag `#etfuturum:no_till_shovels`?
+									&& heldStack.getItem() != ExternalContent.Items.BOTANIA_MANASTEEL_SHOVEL.get()
+									&& heldStack.getItem() != ExternalContent.Items.THAUMCRAFT_EARTHMOVER_SHOVEL.get()) {
 								if (ConfigBlocksItems.enableGrassPath && toolClasses.contains("shovel") && !world.getBlock(x, y + 1, z).getMaterial().isSolid() && (oldBlock == Blocks.grass || oldBlock == Blocks.dirt || oldBlock == Blocks.mycelium)) {
 									player.swingItem();
 									if (!world.isRemote) {
@@ -1224,8 +1221,7 @@ public class ServerEventHandler {
 		int z = MathHelper.floor_double(event.z);
 		World world = event.world;
 		EntityLivingBase entity = event.entityLiving;
-		if (event.entityLiving instanceof EntityShulker) {
-			EntityShulker shulker = ((EntityShulker) event.entityLiving);
+		if (event.entityLiving instanceof EntityShulker shulker) {
 			shulker.persistenceRequired = false;
 			if (ConfigTweaks.spawnAnywhereShulkerColors) {
 				for (EnumFacing facing : Utils.ENUM_FACING_VALUES) {
@@ -1369,27 +1365,19 @@ public class ServerEventHandler {
 
 	@SubscribeEvent
 	public void spawnEvent(EntityJoinWorldEvent event) {
-		int x = MathHelper.floor_double(event.entity.posX);
-		int y = MathHelper.floor_double(event.entity.posY);
-		int z = MathHelper.floor_double(event.entity.posZ);
-		if (event.entity instanceof EntityPig) {
-			EntityPig pig = (EntityPig) event.entity;
+		if (event.entity instanceof EntityPig pig) {
 			if (ModItems.BEETROOT.isEnabled()) {
 				pig.tasks.addTask(4, new EntityAITempt(pig, 1.2, ModItems.BEETROOT.get(), false));
 			}
-		} else if (event.entity instanceof EntityChicken) {
-			EntityChicken chicken = (EntityChicken) event.entity;
+		} else if (event.entity instanceof EntityChicken chicken) {
 			if (ModItems.BEETROOT.isEnabled()) {
 				chicken.tasks.addTask(3, new EntityAITempt(chicken, 1.0D, ModItems.BEETROOT_SEEDS.get(), false));
 			}
-		} else if (ConfigEntities.enableRabbit && event.entity instanceof EntityWolf) {
-			EntityWolf wolf = (EntityWolf) event.entity;
+		} else if (ConfigEntities.enableRabbit && event.entity instanceof EntityWolf wolf) {
 			wolf.targetTasks.addTask(4, new EntityAITargetNonTamed(wolf, EntityRabbit.class, 200, false));
-		} else if (ConfigEntities.enableEndermite && event.entity instanceof EntityEnderman) {
-			EntityEnderman enderman = (EntityEnderman) event.entity;
+		} else if (ConfigEntities.enableEndermite && event.entity instanceof EntityEnderman enderman) {
 			enderman.targetTasks.addTask(3, new EntityAINearestAttackableTarget(enderman, EntityEndermite.class, 100, false));
-		} else if (event.entity instanceof EntityVillager) {
-			EntityVillager villager = (EntityVillager) event.entity;
+		} else if (event.entity instanceof EntityVillager villager) {
 			for (Object obj : villager.tasks.taskEntries) {
 				EntityAITaskEntry entry = (EntityAITaskEntry) obj;
 				if (entry.action instanceof EntityAIOpenDoor) {
@@ -1398,7 +1386,8 @@ public class ServerEventHandler {
 					break;
 				}
 			}
-		} else if (ModBlocks.CONCRETE_POWDER.isEnabled() && event.entity instanceof EntityFallingBlock && ((EntityFallingBlock) event.entity).field_145811_e == ModBlocks.CONCRETE_POWDER.get()) {
+		} else if (!event.world.isRemote && ModBlocks.CONCRETE_POWDER.isEnabled()
+				&& event.entity instanceof EntityFallingBlock && ((EntityFallingBlock) event.entity).field_145811_e/*blockObj*/ == ModBlocks.CONCRETE_POWDER.get()) {
 			fallingConcreteBlocks.add((EntityFallingBlock) event.entity);
 		}
 	}
@@ -1423,8 +1412,7 @@ public class ServerEventHandler {
 			}
 
 			//Sheep dying with modded dyes
-			if (animal instanceof EntitySheep && stack.getItem() != Items.dye && !animal.worldObj.isRemote) {
-				EntitySheep sheep = ((EntitySheep) animal);
+			if (animal instanceof EntitySheep sheep && stack.getItem() != Items.dye && !animal.worldObj.isRemote) {
 				for (int oreID : OreDictionary.getOreIDs(stack)) {
 					int fleeceColour = ~ArrayUtils.indexOf(ModRecipes.ore_dyes, OreDictionary.getOreName(oreID)) & 15;
 					if (ArrayUtils.contains(ModRecipes.ore_dyes, OreDictionary.getOreName(oreID)) && sheep.getFleeceColor() != fleeceColour
@@ -1449,8 +1437,7 @@ public class ServerEventHandler {
 		}
 
 
-		if (ConfigSounds.paintingItemFramePlacing && target instanceof EntityItemFrame) { // --- Add/Rotate within Item Frame --- //
-			EntityItemFrame itemframe = (EntityItemFrame) target;
+		if (ConfigSounds.paintingItemFramePlacing && target instanceof EntityItemFrame itemframe) { // --- Add/Rotate within Item Frame --- //
 
 			if (stack != null && itemframe.getDisplayedItem() == null) // This frame is empty and is getting an item placed inside.
 			{
@@ -1469,7 +1456,7 @@ public class ServerEventHandler {
 
 	private void setAnimalInLove(EntityAnimal animal, EntityPlayer player, ItemStack stack) {
 		if (!animal.isInLove()) {
-			animal.func_146082_f(player);
+			animal.func_146082_f(player); // setInLove
 			if (!player.capabilities.isCreativeMode)
 				if (--stack.stackSize <= 0)
 					player.inventory.setInventorySlotContents(player.inventory.currentItem, null);
@@ -1553,8 +1540,7 @@ public class ServerEventHandler {
 
 	@SubscribeEvent
 	public void entityStruckByLightning(EntityStruckByLightningEvent event) {
-		if (ConfigEntities.enableVillagerTurnsIntoWitch && event.entity instanceof EntityVillager) {
-			EntityVillager villager = (EntityVillager) event.entity;
+		if (ConfigEntities.enableVillagerTurnsIntoWitch && event.entity instanceof EntityVillager villager) {
 			if (!villager.worldObj.isRemote) {
 				EntityWitch witch = new EntityWitch(villager.worldObj);
 				witch.copyLocationAndAnglesFrom(villager);
@@ -1587,7 +1573,7 @@ public class ServerEventHandler {
 
 	@SubscribeEvent
 	public void livingHurtEvent(LivingHurtEvent event) {
-		Entity targetEntity = event.entity;
+		EntityLivingBase targetEntity = event.entityLiving;
 		if (targetEntity == null) return;
 		if (ConfigFunctions.enableHayBaleFalls
 				&& targetEntity.worldObj.getBlock(MathHelper.floor_double(targetEntity.posX), MathHelper.floor_double(targetEntity.posY - 0.20000000298023224D - targetEntity.yOffset), MathHelper.floor_double(targetEntity.posZ)) == Blocks.hay_block
@@ -1608,9 +1594,7 @@ public class ServerEventHandler {
 					float attackDamage = (float) playerSource.getEntityAttribute(SharedMonsterAttributes.attackDamage).getAttributeValue();
 					float enchantmentDamage = 0.0F;
 
-					if (targetEntity instanceof EntityLivingBase) {
-						enchantmentDamage = EnchantmentHelper.getEnchantmentModifierLiving(playerSource, (EntityLivingBase) targetEntity);
-					}
+					enchantmentDamage = EnchantmentHelper.getEnchantmentModifierLiving(playerSource, targetEntity);
 
 					if (attackDamage > 0.0F || enchantmentDamage > 0.0F) {
 						boolean isStrongAttack = playerSource.getHeldItem() != null && event.ammount >= ConfigSounds.combatSoundStrongThreshold;
@@ -1660,14 +1644,50 @@ public class ServerEventHandler {
 			}
 		}
 
-
-		if (!(targetEntity instanceof EntityLivingBase)) {
-			return;
-		}
-		EntityLivingBase livingEntity = (EntityLivingBase) targetEntity;
-
 		if (ConfigBlocksItems.enableTotemUndying) {
-			handleTotemCheck(livingEntity, event);
+			handleTotemCheck(targetEntity, event);
+		}
+
+		if (EntitySquid.class.equals(targetEntity.getClass())) {
+			World w = targetEntity.worldObj;
+			Random r = w.rand;
+			boolean inkSound = ConfigEntities.enableSquidInk || ConfigTweaks.squidsBlindPlayers;
+			doInk:
+			if (inkSound && r.nextDouble() < 0.15 && w instanceof WorldServer serverWorld && targetEntity.isInWater()) {
+				AxisAlignedBB eBox = targetEntity.boundingBox;
+				double cx = eBox.maxX - 0.5 * (eBox.maxX - eBox.minX);
+				double cy = eBox.maxY - 0.5 * (eBox.maxY - eBox.minY);
+				double cz = eBox.maxZ - 0.5 * (eBox.maxZ - eBox.minZ);
+
+				AxisAlignedBB box = AxisAlignedBB.getBoundingBox(-1.5, -1.5, -1.5, 1.5, 1.5, 1.5).offset(cx, cy, cz);
+				List<EntityLivingBase> around = w.getEntitiesWithinAABB(EntityLivingBase.class, box);
+
+				if (around.isEmpty()) {
+					break doInk;
+				}
+
+				EntityLivingBase target = around.get(r.nextInt(around.size()));
+				if (target != null && target != targetEntity) {
+					if (ConfigEntities.enableSquidInk) {
+						serverWorld.func_147487_a("largesmoke", cx, cy, cz, 5, 0.0, 0.0, 0.0, 0.08);
+					}
+					if (ConfigMixins.newMobSounds) {
+						float pitch = (r.nextFloat() - r.nextFloat()) * 0.2F + (target.isChild() ? 1.5F : 1.0F);
+						w.playSoundAtEntity(target, Reference.MCAssetVer + ":entity.squid.squirt", 0.4F, pitch);
+					}
+					if (target.isInWater() && ConfigTweaks.squidsBlindPlayers) {
+						PotionEffect activeEff = target.getActivePotionEffect(Potion.blindness);
+						int time = 20 + r.nextInt(300);
+						if (activeEff != null) {
+							if (activeEff.getAmplifier() > 0) {
+								break doInk;
+							}
+							time += activeEff.getDuration();
+						}
+						target.addPotionEffect(new PotionEffect(Potion.blindness.id, time));
+					}
+				}
+			}
 		}
 
 		// If the attacker is a player spawn the hearts aligned and facing it
@@ -1680,8 +1700,7 @@ public class ServerEventHandler {
 				if (amount > 0) {
 					EntityDamageSource src = (EntityDamageSource) event.source;
 					Entity attacker = src.getSourceOfDamage();
-					if (attacker instanceof EntityPlayer && !(attacker instanceof FakePlayer)) {
-						EntityPlayer player = (EntityPlayer) attacker;
+					if (attacker instanceof EntityPlayer player && !(attacker instanceof FakePlayer)) {
 						Vec3 look = player.getLookVec();
 						look.rotateAroundY((float) Math.PI / 2);
 						for (int i = 0; i < amount; i++) {
@@ -1718,7 +1737,7 @@ public class ServerEventHandler {
 			event.ammount = 0;
 			entity.addPotionEffect(new PotionEffect(Potion.regeneration.id, 900, 1));
 			entity.addPotionEffect(new PotionEffect(Potion.fireResistance.id, 800, 1));
-			entity.addPotionEffect(new PotionEffect(Potion.field_76444_x.id, 100, 1));
+			entity.addPotionEffect(new PotionEffect(Potion.field_76444_x.id, 100, 1)); // absorption
 			//TODO: Make it respect a stack size
 
 			if (entity instanceof EntityLiving) {
@@ -1754,8 +1773,12 @@ public class ServerEventHandler {
 		if (ConfigMixins.enableDoWeatherCycle) {
 			DoWeatherCycle.registerGamerule(event.world);
 		}
-		
-		if(ConfigMixins.enableRandomTickSpeed) {
+
+		if (ConfigMixins.enablePlayersSleepingPecentageGamerule) {
+			PlayersSleepingPercentage.registerGamerule(event.world);
+		}
+
+		if (ConfigMixins.enableRandomTickSpeed) {
 			RandomTickSpeed.registerGamerule(event.world);
 		}
 	}
@@ -1817,8 +1840,7 @@ public class ServerEventHandler {
 
 	@SubscribeEvent
 	public void onExplosion(ExplosionEvent kaboom) {
-		if (ConfigBlocksItems.enableLingeringPotions && !kaboom.world.isRemote && kaboom.explosion.exploder instanceof EntityCreeper) {
-			EntityCreeper creeper = (EntityCreeper) kaboom.explosion.exploder;
+		if (ConfigBlocksItems.enableLingeringPotions && !kaboom.world.isRemote && kaboom.explosion.exploder instanceof EntityCreeper creeper) {
 			Collection<PotionEffect> collection = creeper.getActivePotionEffects();
 			if (!collection.isEmpty()) {
 				ItemStack potion = new ItemStack(ModItems.LINGERING_POTION.get());
@@ -1850,45 +1872,23 @@ public class ServerEventHandler {
 
 	@SubscribeEvent
 	public void onPreWorldTick(TickEvent.WorldTickEvent e) {
-
-		if (ModBlocks.CONCRETE_POWDER.isEnabled() && ModBlocks.CONCRETE.isEnabled()) {
-			doConcreteTracking();
-		}
-
-		if (ConfigMixins.enableDoWeatherCycle && e.phase == TickEvent.Phase.START && e.side == Side.SERVER) {
-			DoWeatherCycle.INSTANCE.isWorldTickInProgress = true;
-			DoWeatherCycle.INSTANCE.isCommandInProgress = false;
-		}
-	}
-
-	private void doConcreteTracking() {
-		for (Iterator<EntityFallingBlock> iterator = fallingConcreteBlocks.iterator(); iterator.hasNext(); ) {
-			EntityFallingBlock block = iterator.next();
-			if (!block.isDead) {
-				int i = MathHelper.floor_double(block.posX);
-				int j = MathHelper.floor_double(block.posY);
-				int k = MathHelper.floor_double(block.posZ);
-
-				for (int jOff = 0; jOff <= (block.motionY < -1.0 ? 1 : 0); jOff++) { // If it's moving downward faster than a threshold speed: 1 in this case
-					if (block.worldObj.getBlock(i, j - jOff, k).getMaterial() == Material.water) {
-						block.worldObj.setBlock(i, j - jOff, k, ModBlocks.CONCRETE.get(), block.field_145814_a, 3);
-						block.setDead();
-						iterator.remove();
-					}
-				}
-			} else {
-				iterator.remove();
+		if (e.phase == TickEvent.Phase.START && e.side == Side.SERVER) {
+			if (ModBlocks.CONCRETE_POWDER.isEnabled() && ModBlocks.CONCRETE.isEnabled()) {
+				doConcreteTracking();
+			}
+			if (ConfigMixins.enableDoWeatherCycle) {
+				DoWeatherCycle.INSTANCE.isWorldTickInProgress = true;
+				DoWeatherCycle.INSTANCE.isCommandInProgress = false;
 			}
 		}
 	}
 
 	@SubscribeEvent
+	@SuppressWarnings("unchecked")
 	public void onPostWorldTick(TickEvent.WorldTickEvent e) {
-		if (ConfigMixins.enableElytra && e.phase == TickEvent.Phase.END && e.world instanceof WorldServer) {
-			WorldServer ws = (WorldServer) e.world;
+		if (ConfigMixins.enableElytra && e.phase == TickEvent.Phase.END && e.world instanceof WorldServer ws) {
 			for (EntityTrackerEntry ete : (Set<EntityTrackerEntry>) ws.getEntityTracker().trackedEntities) {
-				if (ete != null && ete.myEntity instanceof IElytraPlayer) {
-					IElytraPlayer elb = (IElytraPlayer) ete.myEntity;
+				if (ete != null && ete.myEntity instanceof IElytraPlayer elb) {
 					boolean flying = elb.etfu$isElytraFlying();
 					if (!flying && ((IElytraEntityTrackerEntry) ete).etfu$getWasSendingVelUpdates()) {
 						ete.sendVelocityUpdates = false;
@@ -1907,67 +1907,96 @@ public class ServerEventHandler {
 		}
 	}
 
-	private final ItemStackSet NO_BURN_ITEMS = new ItemStackSet();
-	private final ItemStackMap<Integer> BURN_TIME_REMAPPING = new ItemStackMap<>();
+	private void doConcreteTracking() {
+		for (Iterator<EntityFallingBlock> iterator = fallingConcreteBlocks.iterator(); iterator.hasNext(); ) {
+			EntityFallingBlock block = iterator.next();
+			if (!block.isDead) {
+				int i = MathHelper.floor_double(block.posX);
+				int j = MathHelper.floor_double(block.posY);
+				int k = MathHelper.floor_double(block.posZ);
+
+				for (int jOff = 0; jOff <= (block.motionY < -1.0 ? 1 : 0); jOff++) { // If it's moving downward faster than a threshold speed: 1 in this case
+					if (block.worldObj.getBlock(i, j - jOff, k).getMaterial() == Material.water) {
+						block.worldObj.setBlock(i, j - jOff, k, ModBlocks.CONCRETE.get(), block.field_145814_a, 3); // metadata
+						block.setDead();
+						iterator.remove();
+					}
+				}
+			} else {
+				iterator.remove();
+			}
+		}
+	}
+
+	private final ItemStackSet noBurnItems = new ItemStackSet();
+	private final ItemStackMap<Integer> burnTimeRemappings = new ItemStackMap<>();
 
 	@SubscribeEvent
 	public void fuelBurnTime(FuelBurnTimeEvent e) {
 		if (e.fuel == null || e.fuel.getItem() == null || Item.itemRegistry.getNameForObject(e.fuel.getItem()) == null)
 			return;
 
-		if (NO_BURN_ITEMS.isEmpty()) {
-			NO_BURN_ITEMS.add(ModBlocks.WOOD_PLANKS.newItemStack(1, 0));
-			NO_BURN_ITEMS.add(ModBlocks.WOOD_PLANKS.newItemStack(1, 1));
-			NO_BURN_ITEMS.add(ModBlocks.WOOD_FENCE.newItemStack(1, 0));
-			NO_BURN_ITEMS.add(ModBlocks.WOOD_FENCE.newItemStack(1, 1));
+		initFurnaceModifiers();
 
-			NO_BURN_ITEMS.add(ModBlocks.WOOD_SLAB.newItemStack(1, 0));
-			NO_BURN_ITEMS.add(ModBlocks.WOOD_SLAB.newItemStack(1, 1));
-			NO_BURN_ITEMS.add(ModBlocks.WOOD_SLAB.newItemStack(1, 8));
-			NO_BURN_ITEMS.add(ModBlocks.WOOD_SLAB.newItemStack(1, 9));
-
-			NO_BURN_ITEMS.add(ModBlocks.DOUBLE_WOOD_SLAB.newItemStack(1, 0));
-			NO_BURN_ITEMS.add(ModBlocks.DOUBLE_WOOD_SLAB.newItemStack(1, 1));
-			NO_BURN_ITEMS.add(ModBlocks.DOUBLE_WOOD_SLAB.newItemStack(1, 8));
-			NO_BURN_ITEMS.add(ModBlocks.DOUBLE_WOOD_SLAB.newItemStack(1, 9));
-
-			NO_BURN_ITEMS.add(ModBlocks.CRIMSON_STEM.newItemStack(1, OreDictionary.WILDCARD_VALUE));
-			NO_BURN_ITEMS.add(ModBlocks.WARPED_STEM.newItemStack(1, OreDictionary.WILDCARD_VALUE));
-			NO_BURN_ITEMS.add(ModBlocks.CRIMSON_STAIRS.newItemStack(1, OreDictionary.WILDCARD_VALUE));
-			NO_BURN_ITEMS.add(ModBlocks.WARPED_STAIRS.newItemStack(1, OreDictionary.WILDCARD_VALUE));
-			NO_BURN_ITEMS.add(ModBlocks.CRIMSON_FENCE_GATE.newItemStack(1, OreDictionary.WILDCARD_VALUE));
-			NO_BURN_ITEMS.add(ModBlocks.WARPED_FENCE_GATE.newItemStack(1, OreDictionary.WILDCARD_VALUE));
-			NO_BURN_ITEMS.add(ModBlocks.CRIMSON_BUTTON.newItemStack(1, OreDictionary.WILDCARD_VALUE));
-			NO_BURN_ITEMS.add(ModBlocks.WARPED_BUTTON.newItemStack(1, OreDictionary.WILDCARD_VALUE));
-			NO_BURN_ITEMS.add(ModBlocks.CRIMSON_PRESSURE_PLATE.newItemStack(1, OreDictionary.WILDCARD_VALUE));
-			NO_BURN_ITEMS.add(ModBlocks.WARPED_PRESSURE_PLATE.newItemStack(1, OreDictionary.WILDCARD_VALUE));
-			NO_BURN_ITEMS.add(ModBlocks.CRIMSON_DOOR.newItemStack(1, OreDictionary.WILDCARD_VALUE));
-			NO_BURN_ITEMS.add(ModBlocks.WARPED_DOOR.newItemStack(1, OreDictionary.WILDCARD_VALUE));
-			NO_BURN_ITEMS.add(ModBlocks.CRIMSON_TRAPDOOR.newItemStack(1, OreDictionary.WILDCARD_VALUE));
-			NO_BURN_ITEMS.add(ModBlocks.WARPED_TRAPDOOR.newItemStack(1, OreDictionary.WILDCARD_VALUE));
-			NO_BURN_ITEMS.add(ModBlocks.CRIMSON_SIGN.newItemStack(1, OreDictionary.WILDCARD_VALUE));
-			NO_BURN_ITEMS.add(ModBlocks.WARPED_SIGN.newItemStack(1, OreDictionary.WILDCARD_VALUE));
-
-			for (ModBlocks bed : ModBlocks.BEDS) {
-				if (bed.isEnabled()) {
-					NO_BURN_ITEMS.add(bed.newItemStack());
-				}
-			}
-		}
-		if (NO_BURN_ITEMS.contains(e.fuel)) {
+		if (noBurnItems.contains(e.fuel)) {
 			e.burnTime = 0;
 			e.setResult(Result.DENY);
 			return;
 		}
 
-		if (BURN_TIME_REMAPPING.isEmpty()) {
-			BURN_TIME_REMAPPING.put(ModItems.BAMBOO.newItemStack(1, OreDictionary.WILDCARD_VALUE), 50);
-		}
-
-		Integer time = BURN_TIME_REMAPPING.get(e.fuel);
+		Integer time = burnTimeRemappings.get(e.fuel);
 		if (time != null) {
 			e.burnTime = time;
 			e.setResult(Result.ALLOW);
+		}
+	}
+
+	private final AtomicBoolean initNoBurnItems = new AtomicBoolean(false);
+	private final AtomicBoolean initBurnTimeRemappings = new AtomicBoolean(false);
+
+	private void initFurnaceModifiers() {
+		if (!initNoBurnItems.getAndSet(true)) {
+			noBurnItems.add(ModBlocks.WOOD_PLANKS.newItemStack(1, 0));
+			noBurnItems.add(ModBlocks.WOOD_PLANKS.newItemStack(1, 1));
+			noBurnItems.add(ModBlocks.WOOD_FENCE.newItemStack(1, 0));
+			noBurnItems.add(ModBlocks.WOOD_FENCE.newItemStack(1, 1));
+
+			noBurnItems.add(ModBlocks.WOOD_SLAB.newItemStack(1, 0));
+			noBurnItems.add(ModBlocks.WOOD_SLAB.newItemStack(1, 1));
+			noBurnItems.add(ModBlocks.WOOD_SLAB.newItemStack(1, 8));
+			noBurnItems.add(ModBlocks.WOOD_SLAB.newItemStack(1, 9));
+
+			noBurnItems.add(ModBlocks.DOUBLE_WOOD_SLAB.newItemStack(1, 0));
+			noBurnItems.add(ModBlocks.DOUBLE_WOOD_SLAB.newItemStack(1, 1));
+			noBurnItems.add(ModBlocks.DOUBLE_WOOD_SLAB.newItemStack(1, 8));
+			noBurnItems.add(ModBlocks.DOUBLE_WOOD_SLAB.newItemStack(1, 9));
+
+			noBurnItems.add(ModBlocks.CRIMSON_STEM.newItemStack(1, OreDictionary.WILDCARD_VALUE));
+			noBurnItems.add(ModBlocks.WARPED_STEM.newItemStack(1, OreDictionary.WILDCARD_VALUE));
+			noBurnItems.add(ModBlocks.CRIMSON_STAIRS.newItemStack(1, OreDictionary.WILDCARD_VALUE));
+			noBurnItems.add(ModBlocks.WARPED_STAIRS.newItemStack(1, OreDictionary.WILDCARD_VALUE));
+			noBurnItems.add(ModBlocks.CRIMSON_FENCE_GATE.newItemStack(1, OreDictionary.WILDCARD_VALUE));
+			noBurnItems.add(ModBlocks.WARPED_FENCE_GATE.newItemStack(1, OreDictionary.WILDCARD_VALUE));
+			noBurnItems.add(ModBlocks.CRIMSON_BUTTON.newItemStack(1, OreDictionary.WILDCARD_VALUE));
+			noBurnItems.add(ModBlocks.WARPED_BUTTON.newItemStack(1, OreDictionary.WILDCARD_VALUE));
+			noBurnItems.add(ModBlocks.CRIMSON_PRESSURE_PLATE.newItemStack(1, OreDictionary.WILDCARD_VALUE));
+			noBurnItems.add(ModBlocks.WARPED_PRESSURE_PLATE.newItemStack(1, OreDictionary.WILDCARD_VALUE));
+			noBurnItems.add(ModBlocks.CRIMSON_DOOR.newItemStack(1, OreDictionary.WILDCARD_VALUE));
+			noBurnItems.add(ModBlocks.WARPED_DOOR.newItemStack(1, OreDictionary.WILDCARD_VALUE));
+			noBurnItems.add(ModBlocks.CRIMSON_TRAPDOOR.newItemStack(1, OreDictionary.WILDCARD_VALUE));
+			noBurnItems.add(ModBlocks.WARPED_TRAPDOOR.newItemStack(1, OreDictionary.WILDCARD_VALUE));
+			noBurnItems.add(ModBlocks.CRIMSON_SIGN.newItemStack(1, OreDictionary.WILDCARD_VALUE));
+			noBurnItems.add(ModBlocks.WARPED_SIGN.newItemStack(1, OreDictionary.WILDCARD_VALUE));
+
+			for (ModBlocks bed : ModBlocks.BEDS) {
+				if (bed.isEnabled()) {
+					noBurnItems.add(bed.newItemStack());
+				}
+			}
+		}
+
+		if (!initBurnTimeRemappings.getAndSet(true)) {
+			burnTimeRemappings.put(ModItems.BAMBOO.newItemStack(1, OreDictionary.WILDCARD_VALUE), 50);
 		}
 	}
 
@@ -1996,7 +2025,7 @@ public class ServerEventHandler {
 			d3 = ((EntityPlayerMP) playerIn).theItemInWorldManager.getBlockReachDistance();
 		}
 		Vec3 vec31 = vec3.addVector((double) f7 * d3, (double) f6 * d3, (double) f8 * d3);
-		return worldIn.func_147447_a(vec3, vec31, useLiquids, !useLiquids, false);
+		return worldIn.func_147447_a/*rayTraceBlocks*/(vec3, vec31, useLiquids, !useLiquids, false);
 	}
 
 

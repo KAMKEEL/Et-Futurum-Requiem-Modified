@@ -43,7 +43,7 @@ public class DummyWorld extends World {
 
 	public static final DummyWorld GLOBAL_DUMMY_WORLD = new DummyWorld();
 	public GT_IteratorRandom mRandom = new GT_IteratorRandom();
-	private Map<BlockPos, RegistryMapping<Block>> FAKE_WORLD_DATA = Maps.newHashMap(); //Stores setblock data for getblock
+	private final Map<BlockPos, RegistryMapping<Block>> FAKE_WORLD_DATA = Maps.newHashMap(); //Stores setblock data for getblock
 	private static final RegistryMapping<Block> AIR = new RegistryMapping<>(Blocks.air, 0);
 
 	DummyWorld(ISaveHandler par1iSaveHandler, String par2Str, WorldProvider par3WorldProvider, WorldSettings par4WorldSettings, Profiler par5Profiler) {
@@ -183,6 +183,9 @@ public class DummyWorld extends World {
 		return true;
 	}
 
+	/**
+	 * MCP name: {@code getRenderDistanceChunks}
+	 */
 	@Override
 	protected int func_152379_p() {
 		return 0;

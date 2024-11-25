@@ -1,7 +1,5 @@
 package ganymedes01.etfuturum.blocks;
 
-import cpw.mods.fml.relauncher.Side;
-import cpw.mods.fml.relauncher.SideOnly;
 import ganymedes01.etfuturum.EtFuturum;
 import ganymedes01.etfuturum.client.sound.ModSounds;
 import ganymedes01.etfuturum.core.utils.Utils;
@@ -26,13 +24,13 @@ public class BlockMossCarpet extends BaseBlock {
 		this.validateBlockBounds(0);
 	}
 
-	public boolean isOpaqueCube()
-	{
+	@Override
+	public boolean isOpaqueCube() {
 		return false;
 	}
 
-	public boolean renderAsNormalBlock()
-	{
+	@Override
+	public boolean renderAsNormalBlock() {
 		return false;
 	}
 
@@ -40,62 +38,56 @@ public class BlockMossCarpet extends BaseBlock {
 	/**
 	 * Sets the block's bounds for rendering it as an item
 	 */
-	public void setBlockBoundsForItemRender()
-	{
+	@Override
+	public void setBlockBoundsForItemRender() {
 		this.validateBlockBounds(0);
 	}
 
-	public AxisAlignedBB getCollisionBoundingBoxFromPool(World p_149668_1_, int p_149668_2_, int p_149668_3_, int p_149668_4_)
-	{
+	@Override
+	public AxisAlignedBB getCollisionBoundingBoxFromPool(World worldIn, int x, int y, int z) {
 		byte b0 = 0;
 		float f = 0.0625F;
-		return AxisAlignedBB.getBoundingBox((double)p_149668_2_ + this.minX, (double)p_149668_3_ + this.minY, (double)p_149668_4_ + this.minZ, (double)p_149668_2_ + this.maxX, (double)((float)p_149668_3_ + (float)b0 * f), (double)p_149668_4_ + this.maxZ);
+		return AxisAlignedBB.getBoundingBox((double) x + this.minX, (double) y + this.minY, (double) z + this.minZ, (double) x + this.maxX, (float) y + (float) b0 * f, (double) z + this.maxZ);
 	}
 
-	public boolean canPlaceBlockAt(World p_149742_1_, int p_149742_2_, int p_149742_3_, int p_149742_4_)
-	{
-		return super.canPlaceBlockAt(p_149742_1_, p_149742_2_, p_149742_3_, p_149742_4_) && this.canBlockStay(p_149742_1_, p_149742_2_, p_149742_3_, p_149742_4_);
+	@Override
+	public boolean canPlaceBlockAt(World worldIn, int x, int y, int z) {
+		return super.canPlaceBlockAt(worldIn, x, y, z) && this.canBlockStay(worldIn, x, y, z);
 	}
 
-	public void onNeighborBlockChange(World p_149695_1_, int p_149695_2_, int p_149695_3_, int p_149695_4_, Block p_149695_5_)
-	{
-		this.validateLocation(p_149695_1_, p_149695_2_, p_149695_3_, p_149695_4_);
+	@Override
+	public void onNeighborBlockChange(World worldIn, int x, int y, int z, Block neighbor) {
+		this.validateLocation(worldIn, x, y, z);
 	}
 
-	private boolean validateLocation(World p_150090_1_, int p_150090_2_, int p_150090_3_, int p_150090_4_)
-	{
-		if (!this.canBlockStay(p_150090_1_, p_150090_2_, p_150090_3_, p_150090_4_))
-		{
+	private boolean validateLocation(World p_150090_1_, int p_150090_2_, int p_150090_3_, int p_150090_4_) {
+		if (!this.canBlockStay(p_150090_1_, p_150090_2_, p_150090_3_, p_150090_4_)) {
 			this.dropBlockAsItem(p_150090_1_, p_150090_2_, p_150090_3_, p_150090_4_, p_150090_1_.getBlockMetadata(p_150090_2_, p_150090_3_, p_150090_4_), 0);
 			p_150090_1_.setBlockToAir(p_150090_2_, p_150090_3_, p_150090_4_);
 			return false;
-		}
-		else
-		{
+		} else {
 			return true;
 		}
 	}
 
-	public boolean canBlockStay(World p_149718_1_, int p_149718_2_, int p_149718_3_, int p_149718_4_)
-	{
-		return !p_149718_1_.isAirBlock(p_149718_2_, p_149718_3_ - 1, p_149718_4_);
+	@Override
+	public boolean canBlockStay(World worldIn, int x, int y, int z) {
+		return !worldIn.isAirBlock(x, y - 1, z);
 	}
 
-	@SideOnly(Side.CLIENT)
-	public boolean shouldSideBeRendered(IBlockAccess p_149646_1_, int p_149646_2_, int p_149646_3_, int p_149646_4_, int p_149646_5_)
-	{
-		return p_149646_5_ == 1 ? true : super.shouldSideBeRendered(p_149646_1_, p_149646_2_, p_149646_3_, p_149646_4_, p_149646_5_);
+	@Override
+	public boolean shouldSideBeRendered(IBlockAccess worldIn, int x, int y, int z, int side) {
+		return side == 1 || super.shouldSideBeRendered(worldIn, x, y, z, side);
 	}
 
-	public void setBlockBoundsBasedOnState(IBlockAccess p_149719_1_, int p_149719_2_, int p_149719_3_, int p_149719_4_)
-	{
-		this.validateBlockBounds(p_149719_1_.getBlockMetadata(p_149719_2_, p_149719_3_, p_149719_4_));
+	@Override
+	public void setBlockBoundsBasedOnState(IBlockAccess worldIn, int x, int y, int z) {
+		this.validateBlockBounds(worldIn.getBlockMetadata(x, y, z));
 	}
 
-	protected void validateBlockBounds(int input)
-	{
+	protected void validateBlockBounds(int input) {
 		byte b0 = 0;
-		float f = (float)(1 * (1 + b0)) / 16.0F;
+		float f = (float) ((1 + b0)) / 16.0F;
 		this.setBlockBounds(0.0F, 0.0F, 0.0F, 1.0F, f, 1.0F);
 	}
 }

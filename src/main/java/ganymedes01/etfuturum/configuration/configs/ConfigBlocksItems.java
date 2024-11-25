@@ -36,13 +36,18 @@ public class ConfigBlocksItems extends ConfigBase {
 	public static boolean enableMutton;
 	public static boolean enableSponge;
 	public static boolean enablePrismarine;
-	public static boolean enableDoors;
-	public static boolean enableTrapdoors;
+	public static boolean enableVanillaDoors;
+	public static boolean enableNewDoors;
+	public static boolean enableVanillaTrapdoors;
+	public static boolean enableNewTrapdoors;
 	public static boolean enableInvertedDaylightSensor;
 	public static boolean enableOldBaseDaylightSensor;
 	public static boolean enableCoarseDirt;
 	public static boolean enableRedSandstone;
-	public static boolean enableFences;
+	public static boolean enableVanillaFences;
+	public static boolean enableNewFences;
+	public static boolean enableVanillaGates;
+	public static boolean enableNewGates;
 	public static boolean enableSlimeBlock;
 	public static boolean enableBeetroot;
 	public static boolean enableChorusFruit;
@@ -59,7 +64,8 @@ public class ConfigBlocksItems extends ConfigBase {
 	public static boolean enableBarrier;
 	public static boolean enableLightBlock;
 	public static boolean enableNetherGold;
-	public static boolean enableSigns;
+	public static boolean enableVanillaSigns;
+	public static boolean enableNewSigns;
 	public static boolean enableSmoothStone;
 	public static boolean enableSmoothSandstone;
 	public static boolean enableSmoothQuartz;
@@ -81,11 +87,11 @@ public class ConfigBlocksItems extends ConfigBase {
 	public static boolean enableTotemUndying;
 	public static boolean enableRawOres;
 	public static boolean enableNewDyes;
-	public static boolean enableWoodRedstone;
+	public static boolean enableVanillaWoodRedstone;
+	public static boolean enableNewWoodRedstone;
 	public static boolean enableStrippedLogs;
 	public static boolean enableBlueIce;
 	public static boolean enableCopper;
-	public static boolean enableCopperSubItems;
 	public static boolean enableDeepslate;
 	public static boolean enableDeepslateOres;
 	public static boolean enableCalcite;
@@ -203,8 +209,11 @@ public class ConfigBlocksItems extends ConfigBase {
 		}
 
 		boolean masterNetherToggle = getBoolean("masterNetherToggle", catBlockNatural, true,
-				"Set this to false to easily turn off all Nether blocks. This also turns off all Nether biomes because they require the blocks to generate.\n" +
-						"My biomes have compat with Netherlicious (read world.cfg for more info) but if you don't want any compat at all turn this off.\n" +
+				"NOTE: Currently the content below is referring to some things which are behind an experimental toggle." +
+						"\nAdditionally the new nether is NOT compatible with Netherlicious yet. The comment below refers to the plans for when the features below are complete." +
+						"\n" +
+						"Set this to false to easily turn off all Nether blocks. This also turns off all Nether biomes because they require the blocks to generate.\n" +
+						"My biomes have compat with Netherlicious (read world.cfg for more info) but if you don't want any compat or EFR Nether stuff at all turn this off.\n" +
 						"This disables the following toggles: enableCrimsonBlocks, enableWarpedBlocks, enableBlackstone, enableSoulSoil, enableSoulLighting and enableBasalt.\n" +
 						"Amethyst geodes use smooth basalt so go to world.cfg to change the outer block to something else or they won't generate.\n" +
 						"This also turns off Nether wart blocks even though they are older, because Netherlicious also has those.");
@@ -225,14 +234,18 @@ public class ConfigBlocksItems extends ConfigBase {
 		//Function Blocks
 		enableIronTrapdoor = getBoolean("enableIronTrapdoor", catBlockFunc, true, "");
 		enableSponge = getBoolean("enableSponge", catBlockFunc, true, "");
-		enableDoors = getBoolean("enableDoors", catBlockFunc, true, "Enables wood variant doors");
-		enableTrapdoors = getBoolean("enableTrapdoors", catBlockFunc, true, "Enables wood variant trapdoors");
+		enableVanillaDoors = getBoolean("enableVanillaDoors", catBlockFunc, true, "Enables variant doors for materials available natively in Minecraft 1.7");
+		enableNewDoors = getBoolean("enableNewDoors", catBlockFunc, true, "Enables variant doors for materials available in Minecraft after 1.7");
+		enableVanillaTrapdoors = getBoolean("enableVanillaTrapdoors", catBlockFunc, true, "Enables variant trapdoors for materials available natively in Minecraft 1.7");
+		enableNewTrapdoors = getBoolean("enableNewTrapdoors", catBlockFunc, true, "Enables variant trapdoors for materials available in Minecraft after 1.7");
 		enableSlimeBlock = getBoolean("enableSlimeBlock", catBlockFunc, true, "Just bouncy, does not pull blocks.");
-		enableWoodRedstone = getBoolean("enableWoodRedstone", catBlockFunc, true, "Enables wood variant buttons and pressure plates");
+		enableVanillaWoodRedstone = getBoolean("enableVanillaWoodRedstone", catBlockFunc, true, "Enables wood variant buttons and pressure plates for wood available natively in Minecraft 1.7");
+		enableNewWoodRedstone = getBoolean("enableNewWoodRedstone", catBlockFunc, true, "Enables wood variant buttons and pressure plates for wood available in Minecraft after 1.7");
 		enableBarrel = getBoolean("enableBarrel", catBlockFunc, true, "");
 		enableSmoker = getBoolean("enableSmoker", catBlockFunc, true, "Will attempt to seek and auto-add recipes to itself. Look at ConfigFunctions.cfg \"autoAddSmoker\" for more info.\nCompatible with CraftTweaker. In the same way that you'd use furnace.addRecipe or furnace.remove, you can use \"mods.etfuturum.smoker\" instead of \"furnace\".");
 		enableBlastFurnace = getBoolean("enableBlastFurnace", catBlockFunc, true, "Will attempt to seek and auto-add recipes to itself. Look at ConfigFunctions.cfg \"autoAddBlastFurance\" for more info.\nCompatible with CraftTweaker. In the same way that you'd use furnace.addRecipe or furnace.remove, you can use \"mods.etfuturum.blastFurnace\" instead of \"furnace\".");
-		enableSigns = getBoolean("enableSigns", catBlockFunc, true, "");
+		enableVanillaSigns = getBoolean("enableVanillaSigns", catBlockFunc, true, "Enables variant signs for materials available natively in Minecraft 1.7");
+		enableNewSigns = getBoolean("enableNewSigns", catBlockFunc, true, "Enables wood variant signs for materials available in Minecraft after 1.7");
 		enableLavaCauldrons = getBoolean("enableLavaCauldrons", catBlockFunc, true, "Allow lava buckets to fill cauldrons");
 		enableShulkerBoxes = getBoolean("enableShulkerBoxes", catBlockFunc, true, "If Shulkers are disabled, a custom recipe will be required to obtain Shulker shells.");
 		enablePotionCauldron = getBoolean("enablePotionCauldron", catBlockFunc, true, "A port of potion cauldrons from Bedrock Edition. Used to make tipped arrows and store potions.");
@@ -279,7 +292,10 @@ public class ConfigBlocksItems extends ConfigBase {
 		enableTarget = getBoolean("enableTarget", catBlockFunc, true, "Enables target block from 1.16");
 
 		//Misc Blocks
-		enableFences = getBoolean("enableFences", catBlockMisc, true, "Enables wood variant fences and gates");
+		enableVanillaFences = getBoolean("enableVanillaFences", catBlockMisc, true, "Enables variant fences for materials available natively in Minecraft 1.7");
+		enableNewFences = getBoolean("enableNewFences", catBlockMisc, true, "Enables variant fences for materials available in Minecraft after 1.7");
+		enableVanillaGates = getBoolean("enableVanillaGates", catBlockMisc, true, "Enablesvariant gates for materials available natively in Minecraft 1.7");
+		enableNewGates = getBoolean("enableNewGates", catBlockMisc, true, "Enables variant gates for materials available in Minecraft after 1.7");
 		enableBanners = getBoolean("enableBanners", catBlockMisc, true, "");
 		enableConcrete = getBoolean("enableConcrete", catBlockMisc, true, "");
 		enableStrippedLogs = getBoolean("enableStrippedLogs", catBlockMisc, true, "Enables stripped log blocks");
@@ -292,7 +308,6 @@ public class ConfigBlocksItems extends ConfigBase {
 		enableExtraVanillaSlabs = getBoolean("enableExtraVanillaSlabs", catBlockMisc, true, "Slabs for vanilla blocks: stone, mossy stone brick, mossy cobble, cut sandstone");
 		enableExtraVanillaStairs = getBoolean("enableExtraVanillaStairs", catBlockMisc, true, "Stairs for vanilla blocks: stone, mossy stone brick, mossy cobble");
 		enableExtraVanillaWalls = getBoolean("enableExtraVanillaWalls", catBlockMisc, true, "Stairs for vanilla blocks: stone brick, mossy stone brick, sandstone, brick, nether brick");
-		enableCopperSubItems = getBoolean("enableCopperSubItems", catBlockMisc, true, "Copper sub-blocks and items. Disable copper but keep this on if you want the new copper items and blocks made of it, without the main ingot, ore or copper block itself.");
 		enableGlazedTerracotta = getBoolean("enableGlazedTerracotta", catBlockMisc, true, "");
 		enableBarrier = getBoolean("enableBarrier", catBlockMisc, true, "A solid, indestructible and invisible block. Can be seen when holding it in Creative mode.");
 		enableLightBlock = getBoolean("enableLightBlock", catBlockMisc, true, "Invisible light blocks. Only has a selection box when held, right click to change light level. Otherwise functionally identical to air and can be replaced by placing blocks into it. Invisible, but can be seen when holding it in Creative mode.");
@@ -318,15 +333,15 @@ public class ConfigBlocksItems extends ConfigBase {
 		netheriteToolDurability = getInt("netheriteToolDurability", catItemEquipment, 2031, 1, Integer.MAX_VALUE, "");
 		netheriteEnchantability = getInt("netheriteEnchantability", catItemEquipment, 15, 1, Integer.MAX_VALUE, "");
 		netheriteHarvestLevel = getInt("netheriteHarvestLevel", catItemEquipment, 4, 0, Integer.MAX_VALUE, "Netherite harvest level, Diamond is 3");
-		netheriteSpeed = getFloat("netheriteSpeed", catItemEquipment, 9.0f, 0.1f, Float.MAX_VALUE, "Netherite mining speed, Diamond is 8.0");
-		netheriteDamageBase = getFloat("netheriteDamageBase", catItemEquipment, 4.0f, 0.0f, Float.MAX_VALUE, "Neterite base damage, Diamond is 3.0");
-		netheriteArmourDurabilityFactor = getInt("netheriteArmourDurabilityFactor", catItemEquipment, 37, 1, Integer.MAX_VALUE, "");
-		netheritePickaxeDurability = getInt("netheritePickaxeDurability", catItemEquipment, -1, -1, Integer.MAX_VALUE, "Override Netherite Pickaxe Durability, -1 to disable");
-		netheriteSwordDurability = getInt("netheriteSwordDurability", catItemEquipment, -1, -1, Integer.MAX_VALUE, "Override Netherite Sword Durability, -1 to disable");
-		netheriteHoeDurability = getInt("netheriteHoeDurability", catItemEquipment, -1, -1, Integer.MAX_VALUE, "Override Netherite Hoe Durability, -1 to disable");
-		netheriteAxeDurability = getInt("netheriteAxeDurability", catItemEquipment, -1, -1, Integer.MAX_VALUE, "Override Netherite Axe Durability, -1 to disable");
-		netheriteSpadeDurability = getInt("netheriteSpadeDurability", catItemEquipment, -1, -1, Integer.MAX_VALUE, "Override Netherite Shovel Durability, -1 to disable");
-		netheriteHelmetDurability = getInt("netheriteHelmetDurability", catItemEquipment, -1, -1, Integer.MAX_VALUE, "Override Netherite Helmet Durability, -1 to disable");
+		netheriteSpeed = getFloat("netheriteSpeed", catItemEquipment, 9.0f, 0.1f, Float.MAX_VALUE, "Nethherite mining speed, Diamond is 8.0");
+		netheriteDamageBase = getFloat("netheriteDamageBase", catItemEquipment, 4.0f, 0.0f, Float.MAX_VALUE, "Netherite base damage, Diamond is 3.0");
+		netheriteArmourDurabilityFactor = getInt("netheriteArmourDurabilityFactor", catItemEquipment, 37, 1, Integer.MAX_VALUE, "Used by the game to generate the durability value for the armor set. The higher the better.");
+		netheritePickaxeDurability = getInt("netheritePickaxeDurability", catItemEquipment, -1, -1, Integer.MAX_VALUE, "Override Netherite Pickaxe Durability, -1 to use netheriteToolDurability");
+		netheriteSwordDurability = getInt("netheriteSwordDurability", catItemEquipment, -1, -1, Integer.MAX_VALUE, "Override Netherite Sword Durability, -1 to use netheriteToolDurability");
+		netheriteHoeDurability = getInt("netheriteHoeDurability", catItemEquipment, -1, -1, Integer.MAX_VALUE, "Override Netherite Hoe Durability, -1 to use netheriteToolDurability");
+		netheriteAxeDurability = getInt("netheriteAxeDurability", catItemEquipment, -1, -1, Integer.MAX_VALUE, "Override Netherite Axe Durability, -1 to use netheriteToolDurability");
+		netheriteSpadeDurability = getInt("netheriteSpadeDurability", catItemEquipment, -1, -1, Integer.MAX_VALUE, "Override Netherite Shovel Durability, -1 to use netheriteToolDurability");
+		netheriteHelmetDurability = getInt("netheriteHelmetDurability", catItemEquipment, -1, -1, Integer.MAX_VALUE, "Override Netherite Helmet Durability, -1 to no override");
 		netheriteChestplateDurability = getInt("netheriteChestplateDurability", catItemEquipment, -1, -1, Integer.MAX_VALUE, "Override Netherite Chestplate Durability, -1 for no override");
 		netheriteLeggingsDurability = getInt("netheriteLeggingsDurability", catItemEquipment, -1, -1, Integer.MAX_VALUE, "Override Netherite Leggings Durability, -1 for no override");
 		netheriteBootsDurability = getInt("netheriteBootsDurability", catItemEquipment, -1, -1, Integer.MAX_VALUE, "Override Netherite Boots Durability, -1 for no override");
@@ -344,7 +359,7 @@ public class ConfigBlocksItems extends ConfigBase {
 		newBoatSpeed = getFloat("newBoatSpeed", catItemEntity, 1F, 0.1F, 2, "The speed multiplier for boats while in water. Use this if you want to make the boats faster or slower. 1 = no speed change");
 		newBoatPassengerSeat = getBoolean("newBoatPassengerSeat", catItemEntity, true, "If disabled, only one person can sit in the new boat at a time. The new seat is actually an invisible entity that follows new boats.");
 		Property newBoatEntityBlacklistProp = get(catItemEntity, "newBoatEntityBlacklist", new String[]{});
-		newBoatEntityBlacklistProp.comment = "What entities shouldn't be able to sit in the boat? You can either provide an entity ID (modid.entityid, for vanilla entities type just entity ID), or search for a string in the classpath (classpath:stringtofind).\nSeparate entries in the list by a new line. Note that players can always sit even if blacklisted, and some entities, like horses, water mobs or nonliving entities, will never be allowed to sit in boats.\nIt's a little hard to explain, a more detailed explanation and list of examples can be found here: https://pastebin.com/XNZ7VWKh";
+		newBoatEntityBlacklistProp.comment = "What entities shouldn't be able to sit in the boat? This is ONLY for new boats. You can either provide an entity ID (modid.entityid, for vanilla entities type just entity ID), or search for a string in the classpath (classpath:stringtofind).\nSeparate entries in the list by a new line. Note that players can always sit even if blacklisted, and some entities, like horses, water mobs or nonliving entities, will never be allowed to sit in boats.\nIt's a little hard to explain, a more detailed explanation and list of examples can be found here: https://gist.github.com/Roadhog360/0a9975d113217e65cc6b06c494454e4f";
 		newBoatEntityBlacklist = newBoatEntityBlacklistProp.getStringList();
 		newBoatEntityBlacklistAsWhitelist = getBoolean("newBoatEntityBlacklistAsWhitelist", catItemEntity, false, "Treat the entity blacklist as a whitelist, ONLY entities matching that criteria will be allowed.");
 

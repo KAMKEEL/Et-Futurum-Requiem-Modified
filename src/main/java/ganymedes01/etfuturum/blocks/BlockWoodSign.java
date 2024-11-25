@@ -1,7 +1,5 @@
 package ganymedes01.etfuturum.blocks;
 
-import cpw.mods.fml.relauncher.Side;
-import cpw.mods.fml.relauncher.SideOnly;
 import ganymedes01.etfuturum.EtFuturum;
 import ganymedes01.etfuturum.ModItems;
 import ganymedes01.etfuturum.client.sound.ModSounds;
@@ -10,6 +8,7 @@ import net.minecraft.block.Block;
 import net.minecraft.block.BlockSign;
 import net.minecraft.init.Blocks;
 import net.minecraft.item.Item;
+import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.IIcon;
 import net.minecraft.world.World;
 
@@ -27,7 +26,7 @@ public class BlockWoodSign extends BlockSign {
 
 	public final boolean standing;
 
-	public BlockWoodSign(Class<?> p_i45426_1_, boolean p_i45426_2_, String type, Block block, int meta) {
+	public BlockWoodSign(Class<? extends TileEntity> p_i45426_1_, boolean p_i45426_2_, String type, Block block, int meta) {
 		super(p_i45426_1_, p_i45426_2_);
 		this.meta = meta;
 		baseBlock = block;
@@ -59,15 +58,14 @@ public class BlockWoodSign extends BlockSign {
 	}
 
 	@Override
-	@SideOnly(Side.CLIENT)
 	public IIcon getIcon(int side, int meta) {
 		return baseBlock.getIcon(side, this.meta);
 	}
 
 	@Override
-	public Item getItemDropped(int p_149650_1_, Random p_149650_2_, int p_149650_3_) {
+	public Item getItemDropped(int meta, Random random, int fortune) {
 		if (baseBlock == Blocks.planks) {
-			return ModItems.OLD_SIGN_ITEMS[meta - 1].get();
+			return ModItems.OLD_SIGN_ITEMS[this.meta - 1].get();
 		}
 		//Only apply this logic to new signs; old ones use a separate item.
 		return Item.getItemFromBlock(standingSign);
@@ -75,8 +73,7 @@ public class BlockWoodSign extends BlockSign {
 
 
 	@Override
-	@SideOnly(Side.CLIENT)
-	public Item getItem(World p_149694_1_, int p_149694_2_, int p_149694_3_, int p_149694_4_) {
+	public Item getItem(World worldIn, int x, int y, int z) {
 		return getItemDropped(0, null, 0);
 	}
 

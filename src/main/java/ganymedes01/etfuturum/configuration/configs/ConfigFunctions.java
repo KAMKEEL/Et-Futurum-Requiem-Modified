@@ -2,7 +2,7 @@ package ganymedes01.etfuturum.configuration.configs;
 
 import cpw.mods.fml.client.FMLClientHandler;
 import cpw.mods.fml.common.registry.GameRegistry;
-import ganymedes01.etfuturum.EtFuturumMixinPlugin;
+import ganymedes01.etfuturum.mixinplugin.EtFuturumEarlyMixins;
 import ganymedes01.etfuturum.compat.ModsList;
 import ganymedes01.etfuturum.configuration.ConfigBase;
 import ganymedes01.etfuturum.core.utils.Logger;
@@ -161,6 +161,7 @@ public class ConfigFunctions extends ConfigBase {
 	public static boolean enableAttackedAtYawFix = true; //Servers should always send the packet, it's up to the client to disable handling of this feature
 	public static boolean enableSubtitles;
 	public static byte elytraDataWatcherFlag;
+	public static boolean useStoneHardnessForDeepslate;
 	public static boolean enableDoorRecipeBuffs;
 	public static boolean inventoryBedModels;
 	public static boolean mobSpawnerEgging;
@@ -168,7 +169,6 @@ public class ConfigFunctions extends ConfigBase {
 	public static String subtitleBlacklist;
 	public static String[] extraDropRawOres = new String[]{"oreCopper", "oreTin"};
 
-	static final String catUpdateChecker = "update_checker";
 	static final String catChanges = "changes";
 	static final String catSettings = "settings";
 	static final String catClient = "client";
@@ -176,13 +176,11 @@ public class ConfigFunctions extends ConfigBase {
 
 	public ConfigFunctions(File file) {
 		super(file);
-		setCategoryComment(catUpdateChecker, "Category solely for the update checker, to make it easier to find and disable for those who don't want it.");
 		setCategoryComment(catChanges, "Changes to existing content.");
 		setCategoryComment(catSettings, "Settings for Et Futurum content.");
 		setCategoryComment(catCommands, "New commands");
 		setCategoryComment(catClient, "Client-side settings or changes.");
 
-		configCats.add(getCategory(catUpdateChecker));
 		configCats.add(getCategory(catChanges));
 		configCats.add(getCategory(catSettings));
 		configCats.add(getCategory(catCommands));
@@ -191,9 +189,7 @@ public class ConfigFunctions extends ConfigBase {
 
 	@Override
 	protected void syncConfigOptions() {
-		if (EtFuturumMixinPlugin.side == MixinEnvironment.Side.CLIENT) {
-			enableUpdateChecker = getBoolean("enableUpdateChecker", catUpdateChecker, true, "Check and print a chat message in-game if there's a new update available?");
-
+		if (EtFuturumEarlyMixins.side == MixinEnvironment.Side.CLIENT) {
 			enableAttackedAtYawFix = getBoolean("enableAttackedAtYawFix", catChanges, true, "Adds a packet to send the attackedAtYaw field value to the client, which allows the screen to tilt based on where damage came from, and either left or right for direction-less sources like drowning or burning, instead of tilting to the left no matter what.");
 		}
 
@@ -226,6 +222,7 @@ public class ConfigFunctions extends ConfigBase {
 		registerRawItemAsOre = getBoolean("registerRawItemAsOre", catSettings, true, "Register the raw ore items in the OreDictionary as if they were the actual ore block. Such as raw iron being registered as an iron ore, etc...\nTurn this off if you have an ore dictionary converter mod or experience other issues.");
 		extraDropRawOres = getStringList("extraDropRawOres", catSettings, new String[]{"oreCopper", "oreTin"}, "OreDictionary values for ore blocks that should drop extra items (2-3) instead of the usual one, before fortune.");
 		elytraDataWatcherFlag = (byte) getInt("elytraDataWatcherFlag", catSettings, 7, 0, 31, "The data watcher flag for the Elytra, used to sync the elytra animation with other players. In vanilla the max value is 7, players use 0-4, so you can set this to 6 or 7 by default. ASJCore increases the max value to 31.\nDo not change this value if you don't need to, or do not know what you're doing.");
+		useStoneHardnessForDeepslate = getBoolean("useStoneHardnessForDeepslate", catSettings, false, "Whether deepslate blocks should have the same hardness as their stone counterparts. This allows the asthetics of deepslate without the added hardness.");
 
 		//client
 		enableTransparentAmour = getBoolean("enableTransparentAmour", catClient, true, "Allow non-opaque armour");
@@ -247,6 +244,7 @@ public class ConfigFunctions extends ConfigBase {
 		subtitleBlacklist = getString("subtitleBlacklist", catClient, "^(dig\\.*)", "Regex of subtitles to blacklist");
 	}
 
+	@Override
 	protected void initValues() {
 		ConfigFunctions.shulkerBans = new ArrayList<Item>();
 		for (String itemName : ConfigFunctions.shulkerBansString) {
@@ -265,7 +263,7 @@ public class ConfigFunctions extends ConfigBase {
 			}
 		}
 
-		if (EtFuturumMixinPlugin.side == MixinEnvironment.Side.CLIENT && ConfigFunctions.enablePlayerSkinOverlay) {
+		if (EtFuturumEarlyMixins.side == MixinEnvironment.Side.CLIENT && ConfigFunctions.enablePlayerSkinOverlay) {
 			if (ModsList.EARS.isLoaded() || ModsList.FOAMFIX.isLoaded() || ModsList.SKINPORT.isLoaded() || ModsList.MOREPLAYERMODELS.isLoaded()
 					|| ModsList.DRAGON_BLOCK_C.isLoaded() || FMLClientHandler.instance().hasOptifine()) {
 				ConfigFunctions.enablePlayerSkinOverlay = false;

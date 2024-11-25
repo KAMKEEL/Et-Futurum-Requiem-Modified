@@ -8,8 +8,6 @@ import cpw.mods.fml.common.gameevent.InputEvent;
 import cpw.mods.fml.common.gameevent.TickEvent;
 import cpw.mods.fml.common.gameevent.TickEvent.ClientTickEvent;
 import cpw.mods.fml.common.gameevent.TickEvent.Phase;
-import cpw.mods.fml.relauncher.Side;
-import cpw.mods.fml.relauncher.SideOnly;
 import ganymedes01.etfuturum.EtFuturum;
 import ganymedes01.etfuturum.ModItems;
 import ganymedes01.etfuturum.api.MultiBlockSoundRegistry;
@@ -118,7 +116,6 @@ public class ClientEventHandler {
 	private boolean eligibleForDebugInfoSwap = false;
 
 	@SubscribeEvent
-	@SideOnly(Side.CLIENT)
 	public void onKeyInput(InputEvent.KeyInputEvent event) {
 		if (ConfigFunctions.enableNewF3Behavior) {
 			if (Keyboard.getEventKey() == Keyboard.KEY_F3) {
@@ -139,7 +136,6 @@ public class ClientEventHandler {
 	}
 
 	@SubscribeEvent
-	@SideOnly(Side.CLIENT)
 	public void onClientTick(ClientTickEvent event) {
 		World world = FMLClientHandler.instance().getWorldClient();
 		EntityPlayer player = FMLClientHandler.instance().getClientPlayerEntity();
@@ -220,20 +216,13 @@ public class ClientEventHandler {
 		}
 	}
 
-	@SideOnly(Side.CLIENT)
 	private final AmbienceLoop defaultNetherAmbienceLoop = new AmbienceLoop("nether_wastes", 40, 80);
-	@SideOnly(Side.CLIENT)
 	private final List<String> netherAmbienceLoopNames = ImmutableList.of("nether_wastes", "crimson_forest", "warped_forest", "soul_sand_valley", "basalt_deltas");
 
-	@SideOnly(Side.CLIENT)
-	private Map<BiomeGenBase, AmbienceLoop> netherAmbienceLoops;
-	@SideOnly(Side.CLIENT)
+	private final Map<BiomeGenBase, AmbienceLoop> netherAmbienceLoops;
 	private AmbienceLoop netherAmbienceLoop;
-	@SideOnly(Side.CLIENT)
 	private BiomeGenBase prevAmbientBiome;
-	@SideOnly(Side.CLIENT)
 	private BiomeGenBase currentBiome;
-	@SideOnly(Side.CLIENT)
 	PositionedSound musicOverride;
 
 	private void handleBiomeParticles() {
@@ -359,7 +348,7 @@ public class ClientEventHandler {
 		if (ConfigFunctions.enableExtraF3HTooltips && event.showAdvancedItemTooltips) {
 			event.toolTip.add("\u00a78" + Item.itemRegistry.getNameForObject(event.itemStack.getItem()));
 			if (event.itemStack.stackTagCompound != null && !event.itemStack.stackTagCompound.hasNoTags()) {
-				event.toolTip.add("\u00a78NBT: " + event.itemStack.stackTagCompound.func_150296_c().size() + " Tag(s)");
+				event.toolTip.add("\u00a78NBT: " + event.itemStack.stackTagCompound.func_150296_c/*getKeySet*/().size() + " Tag(s)");
 			}
 		}
 	}
@@ -393,7 +382,6 @@ public class ClientEventHandler {
 		}
 	}
 
-	@SideOnly(Side.CLIENT)
 	@SubscribeEvent
 	public void onPlaySoundEvent(PlaySoundEvent17 event) {
 		if (event.sound != null && event.name != null && FMLClientHandler.instance().getWorldClient() != null) {
@@ -408,7 +396,7 @@ public class ClientEventHandler {
 
 			final boolean hitSound = block.stepSound.getStepResourcePath().endsWith(event.name);
 			final boolean breakSound = block.stepSound.getBreakSound().endsWith(event.name);
-			final boolean placeSound = block.stepSound.func_150496_b().endsWith(event.name);
+			final boolean placeSound = block.stepSound.func_150496_b/*getPlaceSound*/().endsWith(event.name);
 
 			if (MultiBlockSoundRegistry.multiBlockSounds.containsKey(block) && (hitSound || breakSound || placeSound)) {
 				MultiBlockSoundContainer obj = MultiBlockSoundRegistry.multiBlockSounds.get(block);
@@ -477,8 +465,6 @@ public class ClientEventHandler {
 
 				// --- Wooden/Metal Pressure plate --- //
 				if (block instanceof BlockBasePressurePlate && event.name.equals("random.click")) {
-					String material = block.getMaterial() == Material.wood ? "wooden" : "metal";
-
 					String s = null;
 					if (block.stepSound == Block.soundTypeMetal) {
 						s = Reference.MCAssetVer + ":block.metal_pressure_plate.click";
@@ -512,7 +498,7 @@ public class ClientEventHandler {
 				Item item = Item.getItemFromBlock(blockBeneath);
 				if (item != null && item.getHasSubtypes()) {
 					try {
-						STORAGE_STACK.func_150996_a(item);
+						STORAGE_STACK.func_150996_a(item); // setItem
 						STORAGE_STACK.setItemDamage(world.getBlockMetadata(MathHelper.floor_float(soundX), MathHelper.floor_float(soundY), MathHelper.floor_float(soundZ)));
 						blockName = item.getUnlocalizedName(STORAGE_STACK).toLowerCase();
 					} catch (
@@ -553,8 +539,7 @@ public class ClientEventHandler {
 
 
 			// --- Book page turn --- //
-			if (mc.currentScreen instanceof GuiScreenBook && event.name.equals("gui.button.press")) {
-				GuiScreenBook gui = (GuiScreenBook) mc.currentScreen;
+			if (mc.currentScreen instanceof GuiScreenBook gui && event.name.equals("gui.button.press")) {
 				// If there is a disagreement on page, play the page-turning sound
 				if (gui.currPage != this.currPage) {
 					this.currPage = gui.currPage;
@@ -574,7 +559,7 @@ public class ClientEventHandler {
 				if (musicOverride == null || !mc.getSoundHandler().isSoundPlaying(musicOverride)) {
 					String music = getAmbientMusicOverride();
 					if (music != null) {
-						musicOverride = PositionedSoundRecord.func_147673_a(new ResourceLocation(music));
+						musicOverride = PositionedSoundRecord.func_147673_a(new ResourceLocation(music)); // createPositionedSoundRecord
 						event.result = musicOverride;
 					}
 				} else {
@@ -607,6 +592,9 @@ public class ClientEventHandler {
 				}
 				return Reference.MCAssetVer + ":block.wooden_door." + closeOrOpen;
 			} else if (block.getMaterial() == Material.iron) {
+				if (block.stepSound == ModSounds.soundCopper) {
+					return Reference.MCAssetVer + ":block.copper_door." + closeOrOpen;
+				}
 				return Reference.MCAssetVer + ":block.iron_door." + closeOrOpen;
 			}
 		}
@@ -624,6 +612,9 @@ public class ClientEventHandler {
 				}
 				return Reference.MCAssetVer + ":block.wooden_trapdoor." + closeOrOpen;
 			} else if (block.getMaterial() == Material.iron) {
+				if (block.stepSound == ModSounds.soundCopper) {
+					return Reference.MCAssetVer + ":block.copper_trapdoor." + closeOrOpen;
+				}
 				return Reference.MCAssetVer + ":block.iron_trapdoor." + closeOrOpen;
 			}
 		}
@@ -648,7 +639,6 @@ public class ClientEventHandler {
 
 	private static final String ignore_suffix = "$etfuturum:ignore";
 
-	@SideOnly(Side.CLIENT)
 	@SubscribeEvent
 	public void onPlaySoundAtEntityEvent(PlaySoundAtEntityEvent event) {
 		if (event.name == null) return; //Some mods fire null sounds, blech
@@ -674,8 +664,7 @@ public class ClientEventHandler {
 			return;//This is the only code I want to run if !isRemote
 		}
 
-		if (entity instanceof EntityPlayer && event.name.equals("random.drink")) {
-			EntityPlayer player = (EntityPlayer) entity;
+		if (entity instanceof EntityPlayer player && event.name.equals("random.drink")) {
 			if (player.isUsingItem() && player.getHeldItem() != null && player.getHeldItem().getItem() instanceof ItemHoneyBottle) {
 				entity.playSound(Reference.MCAssetVer + ":item.honey_bottle.drink" + ignore_suffix, 1, 1);
 				event.setCanceled(true);
@@ -798,7 +787,6 @@ public class ClientEventHandler {
 	public static int main_menu_display_count = 0;
 
 	@SubscribeEvent
-	@SideOnly(Side.CLIENT)
 	public void openMainMenu(GuiOpenEvent event) {
 		if (event.gui instanceof GuiMainMenu) {
 			this.showedDebugWarning = false;

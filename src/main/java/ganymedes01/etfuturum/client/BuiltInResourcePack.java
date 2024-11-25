@@ -99,9 +99,8 @@ public abstract class BuiltInResourcePack extends AbstractResourcePack {
 		return resourcesEnabled && langEnabled;
 	}
 
-	@SuppressWarnings("unchecked")
 	private static void inject(IResourcePack resourcePack) {
-		List defaultResourcePacks = ReflectionHelper.getPrivateValue(Minecraft.class, Minecraft.getMinecraft(), "defaultResourcePacks", "field_110449_ao");
+		List<IResourcePack> defaultResourcePacks = ReflectionHelper.getPrivateValue(Minecraft.class, Minecraft.getMinecraft(), "defaultResourcePacks", "field_110449_ao");
 		defaultResourcePacks.add(resourcePack);
 		IResourceManager resMan = Minecraft.getMinecraft().getResourceManager();
 		if (resMan instanceof SimpleReloadableResourceManager) {
@@ -187,6 +186,7 @@ public abstract class BuiltInResourcePack extends AbstractResourcePack {
 					}
 					langFile.add(currentLine.trim());
 				}
+				reader.close();
 
 
 				List<String> ignoredKeys = Lists.newArrayList(); //Ignore these keys under certain conditions
@@ -194,18 +194,18 @@ public abstract class BuiltInResourcePack extends AbstractResourcePack {
 					ignoredKeys.add("item.bed.name");
 					ignoredKeys.add("tile.bed.name");
 				}
-				if (!ConfigBlocksItems.enableSigns) {
+				if (!ConfigBlocksItems.enableVanillaSigns) {
 					ignoredKeys.add("item.sign.name");
 					ignoredKeys.add("tile.sign.name");
 				}
-				if (!ConfigBlocksItems.enableDoors) {
+				if (!ConfigBlocksItems.enableVanillaDoors) {
 					ignoredKeys.add("item.doorWood.name");
 					ignoredKeys.add("tile.doorWood.name");
 				}
-				if (!ConfigBlocksItems.enableTrapdoors) {
+				if (!ConfigBlocksItems.enableVanillaTrapdoors) {
 					ignoredKeys.add("tile.trapdoor.name");
 				}
-				if (!ConfigBlocksItems.enableFences) {
+				if (!ConfigBlocksItems.enableVanillaFences) {
 					ignoredKeys.add("tile.fence.name");
 					ignoredKeys.add("tile.fenceGate.name");
 				}

@@ -1,6 +1,6 @@
 package ganymedes01.etfuturum.configuration.configs;
 
-import ganymedes01.etfuturum.EtFuturumMixinPlugin;
+import ganymedes01.etfuturum.mixinplugin.EtFuturumEarlyMixins;
 import ganymedes01.etfuturum.configuration.ConfigBase;
 import org.spongepowered.asm.mixin.MixinEnvironment;
 
@@ -43,6 +43,8 @@ public class ConfigMixins extends ConfigBase {
 	public static boolean hideSingleLevelEnchants;
 	public static boolean fireproofItems;
 	public static boolean thinPanes;
+	public static boolean colorGrassBlockItemSides;
+	public static boolean enablePlayersSleepingPecentageGamerule;
 
 	static final String catBackport = "backported features";
 	static final String catOptimization = "optimizations";
@@ -64,7 +66,7 @@ public class ConfigMixins extends ConfigBase {
 
 	@Override
 	protected void syncConfigOptions() {
-		if (EtFuturumMixinPlugin.side == MixinEnvironment.Side.CLIENT) {
+		if (EtFuturumEarlyMixins.side == MixinEnvironment.Side.CLIENT) {
 			furnaceCrackle = getBoolean("furnaceCrackle", catBackport, true, "Allows vanilla furnaces to have crackling sounds.\nModified Client Classes: net.minecraft.block.BlockFurnace");
 			boundedBlockBreakingParticles = getBoolean("boundedBlockBreakingParticles", catBackport, true, "In 1.14+, when breaking a block, the block break particles stay within the outline, instead of always occupying the whole block space.\nMofified Client Classes: net.minecraft.client.particle.EffectRenderer");
 			adjustedAttenuation = getBoolean("adjustedAttenuation", catBackport, true, "Adjusts the attenuation distance of certain sounds. This needs to be a separate mixin due to the way it works.\nCurrently changes portal abience, and beacon ambience to have an attenuation distance of 8 blocks away, instead of 16.\nModified Client Classes: net.minecraft.client.audio.SoundManager");
@@ -105,10 +107,13 @@ public class ConfigMixins extends ConfigBase {
 		thinPanes = getBoolean("thinPanes", catBackport, true, "Panes [Iron Bars, Glass Panes, etc] are changed to a single post if they are not connected to any other blocks" +
 				"\nModified Classes: net.minecraft.block.BlockPane" +
 				"\nModified Client Classes: net.minecraft.client.renderer.RenderBlocks");
+		colorGrassBlockItemSides = getBoolean("colorGrassBlockItemSides", catBackport, true, "Grass block sides are colored in the player's inventory" +
+				"\nModified Client Classes: net.minecraft.client.renderer.RenderBlocks");
 
 		stepHeightFix = getBoolean("stepHeightFix", catFixes, true, "Makes the player able to step up even if a block would be above their head at the destination.\nModified classes: net.minecraft.entity.Entity");
 		arrowFallingFix = getBoolean("arrowFallingFix", catFixes, true, "Prevents arrows from falling off of blocks too easily\nModified classes: net.minecraft.entity.EntityArrow");
 		collidedThrowableFix = getBoolean("collidedThrowableFix", catFixes, true, "Fixes EntityThrowable entities not calling onEntityCollidedWithBlock, causing them to not trigger target blocks or chime amethyst.\nModified classes: net.minecraft.entity.projectile.EntityThrowable");
 		hideSingleLevelEnchants = getBoolean("hideSingleLevelEnchants", catFixes, true, "Fixes enchantments with only one possible level displaying a level in their name. E.G. \"Silk Touch I\" becomes \"Silk Touch\".\nModified Classes: net.minecraft.enchantment.Enchantment");
+		enablePlayersSleepingPecentageGamerule = getBoolean("enablePlayersSleepingPecentageGamerule", catBackport, true, "You nappa, you get slappa");
 	}
 }

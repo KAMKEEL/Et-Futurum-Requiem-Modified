@@ -2,8 +2,6 @@ package ganymedes01.etfuturum.client.renderer.tileentity;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import cpw.mods.fml.relauncher.Side;
-import cpw.mods.fml.relauncher.SideOnly;
 import ganymedes01.etfuturum.client.LayeredColorMaskTexture;
 import ganymedes01.etfuturum.client.OpenGLHelper;
 import ganymedes01.etfuturum.client.model.ModelBanner;
@@ -21,7 +19,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
-@SideOnly(Side.CLIENT)
 public class TileEntityBannerRenderer extends TileEntitySpecialRenderer {
 
 	private static final Map<String, TimedBannerTexture> CANVAS_TEXTURES = Maps.newHashMap();
@@ -29,7 +26,7 @@ public class TileEntityBannerRenderer extends TileEntitySpecialRenderer {
 	private final ModelBanner bannerModel = new ModelBanner();
 
 	private ResourceLocation getTexture(TileEntityBanner banner) {
-		String s = banner.func_175116_e();
+		String s = banner.getPatternResourceLocation();
 
 		if (s.isEmpty())
 			return null;
@@ -71,7 +68,6 @@ public class TileEntityBannerRenderer extends TileEntitySpecialRenderer {
 		return texture.texture;
 	}
 
-	@SideOnly(Side.CLIENT)
 	static class TimedBannerTexture {
 
 		public long time;
@@ -111,7 +107,7 @@ public class TileEntityBannerRenderer extends TileEntitySpecialRenderer {
 
 		long worldTime = banner.getWorldObj() != null ? banner.getWorldObj().getTotalWorldTime() : 0;
 		// 100 is one full revolution, so we can just mod by 100 without affecting the result
-		int animationProgress100 = (((banner.xCoord % 100) * 7 + (banner.yCoord % 100) * 9 + (banner.zCoord % 100) * 13) + (int)(worldTime % 100)) % 100;
+		int animationProgress100 = (((banner.xCoord % 100) * 7 + (banner.yCoord % 100) * 9 + (banner.zCoord % 100) * 13) + (int) (worldTime % 100)) % 100;
 		float f3 = (float) animationProgress100 + partialTicks;
 		bannerModel.bannerSlate.rotateAngleX = (-0.0125F + 0.01F * MathHelper.cos(f3 * 0.01F * 2F * (float) Math.PI)) * (float) Math.PI;
 		OpenGLHelper.enableRescaleNormal();

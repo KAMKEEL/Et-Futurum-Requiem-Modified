@@ -52,7 +52,7 @@ public enum ModItems {
 	NETHERITE_SWORD(ConfigBlocksItems.enableNetherite, new ItemEFRSword(ModMaterials.NETHERITE_TOOL, ConfigBlocksItems.netheriteSwordDurability)),
 	TOTEM_OF_UNDYING(ConfigBlocksItems.enableTotemUndying, new BaseItem("totem_of_undying").setMaxStackSize(1)),
 	DYE(ConfigBlocksItems.enableNewDyes, new BaseSubtypesItem("white_dye", "blue_dye", "brown_dye", "black_dye").setNames("dye")),
-	COPPER_INGOT(ConfigBlocksItems.enableCopper, new BaseItem("copper_ingot")),
+	COPPER_INGOT(ConfigBlocksItems.enableCopper && !ConfigModCompat.disableCopperOreAndIngotOnly, new BaseItem("copper_ingot")),
 	SUSPICIOUS_STEW(ConfigBlocksItems.enableSuspiciousStew, new ItemSuspiciousStew()),
 	SWEET_BERRIES(ConfigBlocksItems.enableSweetBerryBushes, new ItemSweetBerries()),
 	SHULKER_SHELL(ConfigBlocksItems.enableShulkerBoxes, new BaseItem("shulker_shell")),
@@ -80,15 +80,15 @@ public enum ModItems {
 	MANGROVE_CHEST_BOAT(ConfigBlocksItems.enableNewBoats && ConfigExperiments.enableMangroveBlocks, new ItemNewBoat("minecraft", "mangrove", ModBlocks.WOOD_PLANKS::getItem, 2, true, false)),
 	CHERRY_BOAT(ConfigBlocksItems.enableNewBoats && ConfigBlocksItems.enableCherryBlocks, new ItemNewBoat("minecraft", "cherry", ModBlocks.WOOD_PLANKS::getItem, 3, false, false)),
 	CHERRY_CHEST_BOAT(ConfigBlocksItems.enableNewBoats && ConfigBlocksItems.enableCherryBlocks, new ItemNewBoat("minecraft", "cherry", ModBlocks.WOOD_PLANKS::getItem, 3, true, false)),
-//	BAMBOO_RAFT(ConfigBlocksItems.enableNewBoats, new ItemNewBoat("minecraft", "bamboo", ModBlocks.WOOD_PLANKS::getItem, 4, false, true)),
-//	BAMBOO_CHEST_RAFT(ConfigBlocksItems.enableNewBoats, new ItemNewBoat("minecraft", "bamboo", ModBlocks.WOOD_PLANKS::getItem, 4, true, true)),
+	BAMBOO_RAFT(ConfigBlocksItems.enableNewBoats, new ItemNewBoat("minecraft", "bamboo", ModBlocks.WOOD_PLANKS::getItem, 4, false, true)),
+	BAMBOO_CHEST_RAFT(ConfigBlocksItems.enableNewBoats, new ItemNewBoat("minecraft", "bamboo", ModBlocks.WOOD_PLANKS::getItem, 4, true, true)),
 
 	//legacy sign items -- new signs use their ItemBlock as the sign item instead
-	ITEM_SIGN_SPRUCE(ConfigBlocksItems.enableSigns, new ItemWoodSign((BlockWoodSign) ModBlocks.SIGN_SPRUCE.get())),
-	ITEM_SIGN_BIRCH(ConfigBlocksItems.enableSigns, new ItemWoodSign((BlockWoodSign) ModBlocks.SIGN_BIRCH.get())),
-	ITEM_SIGN_JUNGLE(ConfigBlocksItems.enableSigns, new ItemWoodSign((BlockWoodSign) ModBlocks.SIGN_JUNGLE.get())),
-	ITEM_SIGN_ACACIA(ConfigBlocksItems.enableSigns, new ItemWoodSign((BlockWoodSign) ModBlocks.SIGN_ACACIA.get())),
-	ITEM_SIGN_DARK_OAK(ConfigBlocksItems.enableSigns, new ItemWoodSign((BlockWoodSign) ModBlocks.SIGN_DARK_OAK.get())),
+	ITEM_SIGN_SPRUCE(ConfigBlocksItems.enableVanillaSigns, new ItemWoodSign((BlockWoodSign) ModBlocks.SIGN_SPRUCE.get())),
+	ITEM_SIGN_BIRCH(ConfigBlocksItems.enableVanillaSigns, new ItemWoodSign((BlockWoodSign) ModBlocks.SIGN_BIRCH.get())),
+	ITEM_SIGN_JUNGLE(ConfigBlocksItems.enableVanillaSigns, new ItemWoodSign((BlockWoodSign) ModBlocks.SIGN_JUNGLE.get())),
+	ITEM_SIGN_ACACIA(ConfigBlocksItems.enableVanillaSigns, new ItemWoodSign((BlockWoodSign) ModBlocks.SIGN_ACACIA.get())),
+	ITEM_SIGN_DARK_OAK(ConfigBlocksItems.enableVanillaSigns, new ItemWoodSign((BlockWoodSign) ModBlocks.SIGN_DARK_OAK.get())),
 
 	//Mod Support
 	MODDED_RAW_ORE(Utils.enableModdedRawOres(), new ItemGeneralModdedRawOre("raw_aluminum", "raw_tin", "raw_silver", "raw_lead", "raw_nickel", "raw_platinum", "raw_mythril",

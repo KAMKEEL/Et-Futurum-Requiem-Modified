@@ -1,7 +1,5 @@
 package ganymedes01.etfuturum.client.renderer.entity.elytra;
 
-import cpw.mods.fml.relauncher.Side;
-import cpw.mods.fml.relauncher.SideOnly;
 import ganymedes01.etfuturum.elytra.IClientElytraPlayer;
 import ganymedes01.etfuturum.elytra.IElytraPlayer;
 import net.minecraft.client.model.ModelBase;
@@ -12,7 +10,6 @@ import net.minecraft.util.Vec3;
 import org.lwjgl.opengl.GL11;
 import org.lwjgl.opengl.GL12;
 
-@SideOnly(Side.CLIENT)
 public class ModelElytra extends ModelBase {
 	private final ModelRenderer rightWing;
 	private final ModelRenderer leftWing = new ModelRenderer(this, 22, 0);
@@ -71,8 +68,7 @@ public class ModelElytra extends ModelBase {
 		this.leftWing.rotationPointX = 5.0F;
 		this.leftWing.rotationPointY = f2;
 
-		if (entityIn instanceof IClientElytraPlayer) {
-			IClientElytraPlayer cep = (IClientElytraPlayer) entityIn;
+		if (entityIn instanceof IClientElytraPlayer cep) {
 			cep.setRotateElytraX((float) (cep.getRotateElytraX() + (f - cep.getRotateElytraX()) * 0.1D));
 			cep.setRotateElytraY((float) (cep.getRotateElytraY() + (f3 - cep.getRotateElytraY()) * 0.1D));
 			cep.setRotateElytraZ((float) (cep.getRotateElytraZ() + (f1 - cep.getRotateElytraZ()) * 0.1D));

@@ -21,6 +21,7 @@ import net.minecraftforge.event.entity.player.PlayerInteractEvent;
 import net.minecraftforge.event.world.BlockEvent;
 
 import java.util.List;
+import java.util.function.Supplier;
 
 /**
  * Used while in the dev environment to run random code and test certain features such as structure placement.
@@ -77,12 +78,13 @@ public class DebugTestItem extends BaseItem {
 	private boolean canUse(EntityPlayer player) {
 		if (player.worldObj.isRemote) {
 			return FMLClientHandler.instance().getClientPlayerEntity().capabilities.isCreativeMode;
-		} else if (player instanceof EntityPlayerMP) {
-			return ((EntityPlayerMP) player).theItemInWorldManager.isCreative();
+		} else if (player instanceof EntityPlayerMP entityPlayerMP) {
+			return entityPlayerMP.theItemInWorldManager.isCreative();
 		}
 		return false;
 	}
 
+	@Override
 	public String getItemStackDisplayName(ItemStack p_77653_1_) {
 		return "Debugging Item" + TestTypes.values()[p_77653_1_.getItemDamage() % TestTypes.values().length].getSuffix();
 	}
@@ -98,7 +100,7 @@ public class DebugTestItem extends BaseItem {
 	}
 
 	@Override
-	public void addInformation(ItemStack p_77624_1_, EntityPlayer p_77624_2_, List p_77624_3_, boolean p_77624_4_) {
+	public void addInformation(ItemStack p_77624_1_, EntityPlayer p_77624_2_, List<String> p_77624_3_, boolean p_77624_4_) {
 		if (canUse(p_77624_2_)) {
 			p_77624_3_.add("\u00a7b\u00a7oA debug item used to test mechanics certain code.");
 			p_77624_3_.add("\u00a7a\u00a7oAttack\u00a7a\u00a7o a block to change the test subject.");
@@ -110,6 +112,7 @@ public class DebugTestItem extends BaseItem {
 		super.addInformation(p_77624_1_, p_77624_2_, p_77624_3_, p_77624_4_);
 	}
 
+	@Override
 	public float getDigSpeed(ItemStack itemstack, Block block, int metadata) {
 		return 0;
 	}
@@ -126,28 +129,40 @@ public class DebugTestItem extends BaseItem {
 		NONE(null, false),
 		FOSSIL("Fossil", true) {
 
-			final WorldGenFossil fossil = new WorldGenFossil() {
-				protected boolean canFossilGenerateHere(World world, int x, int y, int z, BlockPos corners) {
-					return true;
-				}
-			};
+			private final Supplier<WorldGenFossil> fossilSupplier = () -> new WorldGenFossil() {
+						@Override
+						protected boolean canFossilGenerateHere (World world,int x, int y, int z, BlockPos corners){
+							return true;
+						}
+					};
+
+			private WorldGenFossil fossil;
 
 			@Override
 			protected boolean runAction(ItemStack stack, EntityPlayer player, World world, int x, int y, int z, int side, float hitX, float hitY, float hitZ) {
+				if(fossil == null) {
+					fossil = fossilSupplier.get();
+				}
 				return fossil.generate(world, world.rand, x, y, z);
 			}
 		},
 		GEODE("Geode", true) {
 
-			final WorldGenGeode fossil = new WorldGenGeode(ConfigWorld.amethystOuterBlock, ConfigWorld.amethystMiddleBlock) {
+			private final Supplier<WorldGenGeode> geodeSupplier = () -> new WorldGenGeode(ConfigWorld.amethystOuterBlock, ConfigWorld.amethystMiddleBlock) {
+				@Override
 				protected boolean isInvalidCorner(World world, int x, int y, int z) {
 					return false;
 				}
 			};
 
+			private WorldGenGeode geode;
+
 			@Override
 			protected boolean runAction(ItemStack stack, EntityPlayer player, World world, int x, int y, int z, int side, float hitX, float hitY, float hitZ) {
-				return fossil.generate(world, world.rand, x, y, z);
+				if(geode == null) {
+					geode = geodeSupplier.get();
+				}
+				return geode.generate(world, world.rand, x, y, z);
 			}
 		},
 		BEE_NEST("Bee Nest", true) {
@@ -158,9 +173,11 @@ public class DebugTestItem extends BaseItem {
 			}
 		},
 		NBT_STRUCTURE_TEST("NBT Structure Test", true) {
+			private final WorldGenNBTStructureTesting struct = new WorldGenNBTStructureTesting();
+
 			@Override
 			protected boolean runAction(ItemStack stack, EntityPlayer player, World world, int x, int y, int z, int side, float hitX, float hitY, float hitZ) {
-				boolean run = new WorldGenNBTStructureTesting().generate(world, world.rand, x, y, z);
+				boolean run = struct.generate(world, world.rand, x, y, z);
 				world.setBlock(x, y, z, Blocks.redstone_block);
 				return run;
 			}

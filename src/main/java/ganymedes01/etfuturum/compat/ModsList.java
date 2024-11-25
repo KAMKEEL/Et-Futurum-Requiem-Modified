@@ -40,9 +40,20 @@ public enum ModsList {
 	SIMPLEORES("simpleores"),
 	DRAGON_QUEST("DQMIIINext"),
 	UPTODATE("uptodate"),
-
+	LOTR("lotr"),
+	NOTFINE("notfine"),
 	NOT_ENOUGH_IDS("neid"),
 	ENDLESS_IDS("endlessids"),
+	ENDLESS_IDS_BLOCKITEM("endlessids_blockitem"),
+	ENDLESS_IDS_DATAWATCHER("endlessids_datawatcher"),
+	ENDLESS_IDS_BIOME("endlessids_biome"),
+	ENDLESS_IDS_POTION("endlessids_potion"),
+	ENDLESS_IDS_ENCHANTMENT("endlessids_enchantment"),
+	MC_PATCHER_FORGE("mcpatcherforge"),
+
+	RPLE("rple"),
+
+	GTNH("dreamcraft"),
 	;
 
 	private final String modID;
@@ -76,7 +87,8 @@ public enum ModsList {
 	}
 
 	public int compareVersion(String compareTo) {
-		return new ComparableVersion(getVersion()).compareTo(new ComparableVersion(compareTo));
+		String cleanedString = compareTo.replaceAll("§.", ""); //Remove folor code values
+		return new ComparableVersion(getVersion()).compareTo(new ComparableVersion(cleanedString));
 	}
 
 	public boolean isVersionNewer(String compareTo) {

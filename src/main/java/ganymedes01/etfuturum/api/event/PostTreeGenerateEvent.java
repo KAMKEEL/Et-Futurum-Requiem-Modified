@@ -1,10 +1,11 @@
 package ganymedes01.etfuturum.api.event;
 
+import cpw.mods.fml.common.eventhandler.Event;
 import net.minecraft.world.World;
 
 import java.util.Random;
 
-public class PostTreeGenerateEvent extends cpw.mods.fml.common.eventhandler.Event {
+public class PostTreeGenerateEvent extends Event {
 	public final World world;
 	public final Random rand;
 	public final int x, y, z;
